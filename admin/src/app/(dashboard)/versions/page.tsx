@@ -3,170 +3,97 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
 
-interface VersionRow {
-  id: string;
-  platform: string;
-  latest_version: string;
-  min_version: string;
-  update_url: string;
-  release_notes: string | null;
-  created_at: string;
-}
+interface VersionRow { id: string; platform: string; latest_version: string; min_version: string; update_url: string; release_notes: string | null; created_at: string; }
+const EMPTY = { platform: 'android', latest_version: '', min_version: '', update_url: '', release_notes: '' };
 
 export default function VersionsPage() {
   const [versions, setVersions] = useState<VersionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    platform: 'ios',
-    latest_version: '',
-    min_version: '',
-    update_url: '',
-    release_notes: '',
-  });
+  const [form, setForm] = useState(EMPTY);
   const supabase = createClient();
 
-  useEffect(() => {
-    fetchVersions();
-  }, []);
+  useEffect(() => { fetchVersions(); }, []);
 
   async function fetchVersions() {
-    const { data } = await supabase
-      .from('app_versions')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data } = await supabase.from('app_versions').select('*').order('created_at', { ascending: false });
     setVersions((data ?? []) as VersionRow[]);
     setLoading(false);
   }
 
-  async function submitVersion() {
-    if (!form.latest_version || !form.min_version || !form.update_url) {
-      alert('请填写完整信息');
-      return;
-    }
-    await supabase.from('app_versions').insert({
-      platform: form.platform,
-      latest_version: form.latest_version,
-      min_version: form.min_version,
-      update_url: form.update_url,
-      release_notes: form.release_notes || null,
-    });
-    setShowForm(false);
-    setForm({ platform: 'ios', latest_version: '', min_version: '', update_url: '', release_notes: '' });
-    fetchVersions();
+  async function submit() {
+    if (!form.latest_version || !form.min_version || !form.update_url) { alert('请填写完整信息'); return; }
+    await supabase.from('app_versions').insert({ ...form, release_notes: form.release_notes || null });
+    setShowForm(false); setForm(EMPTY); fetchVersions();
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">版本管理</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
-        >
-          + 发布新版本
-        </button>
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">版本管理</h2>
+          <p className="text-slate-500 text-sm mt-1">管理 App 更新推送</p>
+        </div>
+        <button onClick={() => setShowForm(true)} className="btn-primary">+ 发布新版本</button>
       </div>
 
       {showForm && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">发布新版本</h2>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
+          <h3 className="font-semibold text-slate-900 mb-5">发布新版本</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">平台</label>
-              <select
-                value={form.platform}
-                onChange={(e) => setForm({ ...form, platform: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="ios">iOS</option>
-                <option value="android">Android</option>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">平台</label>
+              <select value={form.platform} onChange={e => setForm({ ...form, platform: e.target.value })} className="input-base bg-white">
+                <option value="android">🤖 Android</option>
+                <option value="ios">🍎 iOS</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">最新版本号</label>
-              <input
-                type="text"
-                placeholder="如：1.2.0"
-                value={form.latest_version}
-                onChange={(e) => setForm({ ...form, latest_version: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">最新版本号</label>
+              <input value={form.latest_version} onChange={e => setForm({ ...form, latest_version: e.target.value })} placeholder="1.2.0" className="input-base" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">强制更新最低版本</label>
-              <input
-                type="text"
-                placeholder="如：1.0.0（低于此版本强制更新）"
-                value={form.min_version}
-                onChange={(e) => setForm({ ...form, min_version: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">强制更新最低版本</label>
+              <input value={form.min_version} onChange={e => setForm({ ...form, min_version: e.target.value })} placeholder="1.0.0" className="input-base" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">更新下载地址</label>
-              <input
-                type="text"
-                placeholder="App Store / Google Play URL"
-                value={form.update_url}
-                onChange={(e) => setForm({ ...form, update_url: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">下载地址</label>
+              <input value={form.update_url} onChange={e => setForm({ ...form, update_url: e.target.value })} placeholder="https://..." className="input-base" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">更新说明</label>
-              <textarea
-                placeholder="新版本更新内容..."
-                value={form.release_notes}
-                onChange={(e) => setForm({ ...form, release_notes: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                rows={3}
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">更新说明</label>
+              <textarea value={form.release_notes} onChange={e => setForm({ ...form, release_notes: e.target.value })} rows={3} placeholder="新版本改进内容..." className="input-base resize-none" />
             </div>
           </div>
-          <div className="flex gap-3 mt-4">
-            <button onClick={submitVersion} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
-              发布
-            </button>
-            <button onClick={() => setShowForm(false)} className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg text-sm hover:bg-gray-300">
-              取消
-            </button>
+          <div className="flex gap-3 mt-5">
+            <button onClick={submit} className="btn-primary">发布</button>
+            <button onClick={() => setShowForm(false)} className="btn-ghost">取消</button>
           </div>
         </div>
       )}
 
-      {loading ? (
-        <div className="text-center text-gray-400 py-20">加载中...</div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">平台</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">最新版本</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">强制更新门槛</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">更新说明</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">发布时间</th>
-              </tr>
-            </thead>
-            <tbody>
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        {loading ? <div className="flex items-center justify-center h-48 text-slate-400"><svg className="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>加载中...</div> : (
+          <table className="w-full">
+            <thead><tr className="bg-slate-50 border-b border-slate-100">
+              <th className="table-th">平台</th><th className="table-th">最新版本</th>
+              <th className="table-th">强制更新门槛</th><th className="table-th">更新说明</th><th className="table-th">发布时间</th>
+            </tr></thead>
+            <tbody className="divide-y divide-slate-50">
               {versions.map((v) => (
-                <tr key={v.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${v.platform === 'ios' ? 'bg-gray-900 text-white' : 'bg-green-100 text-green-700'}`}>
-                      {v.platform === 'ios' ? '🍎 iOS' : '🤖 Android'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono font-semibold text-blue-700">{v.latest_version}</td>
-                  <td className="px-4 py-3 font-mono text-red-600">{v.min_version}</td>
-                  <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{v.release_notes ?? '-'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{new Date(v.created_at).toLocaleString('zh-CN')}</td>
+                <tr key={v.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="table-td"><span className={`badge ${v.platform === 'ios' ? 'bg-slate-900 text-white' : 'badge-green'}`}>{v.platform === 'ios' ? '🍎 iOS' : '🤖 Android'}</span></td>
+                  <td className="table-td font-mono font-bold text-indigo-600">{v.latest_version}</td>
+                  <td className="table-td"><span className="badge badge-red font-mono">{v.min_version}</span></td>
+                  <td className="table-td text-slate-500 max-w-xs truncate">{v.release_notes ?? '—'}</td>
+                  <td className="table-td text-slate-400 text-xs">{new Date(v.created_at).toLocaleString('zh-CN')}</td>
                 </tr>
               ))}
+              {versions.length === 0 && <tr><td colSpan={5} className="text-center text-slate-400 py-16 text-sm">暂无版本记录</td></tr>}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
