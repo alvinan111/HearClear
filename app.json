@@ -1,0 +1,75 @@
+{
+  "expo": {
+    "name": "HearClear",
+    "slug": "hearclear",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "scheme": "hearclear",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#060B18"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.hearclear.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "HearClear 需要访问麦克风来实时采集并增强声音，帮助听力不佳的用户清晰聆听。",
+        "NSCameraUsageDescription": "HearClear 需要相机权限用于问题反馈时上传截图。",
+        "UIBackgroundModes": ["audio"],
+        "NSMicrophoneUsageDescription~zh": "HearClear 需要访问麦克风来实时采集并增强声音。"
+      }
+    },
+    "android": {
+      "package": "com.hearclear.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#060B18"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#060B18",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#38BDF8",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "HearClear 助听中"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
