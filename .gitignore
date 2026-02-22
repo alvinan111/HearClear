@@ -47,5 +47,9 @@ yarn-error.log*
 # Testing
 coverage/
 
+# Android signing
+*.keystore
+credentials.json
+
 # TypeScript
 *.tsbuildinfo
