@@ -19,7 +19,9 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "HearClear 需要访问麦克风来实时采集并增强声音，帮助听力不佳的用户清晰聆听。",
         "NSCameraUsageDescription": "HearClear 需要相机权限用于问题反馈时上传截图。",
-        "UIBackgroundModes": ["audio"],
+        "UIBackgroundModes": [
+          "audio"
+        ],
         "NSMicrophoneUsageDescription~zh": "HearClear 需要访问麦克风来实时采集并增强声音。"
       }
     },
@@ -70,6 +72,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c6310ce6-f156-4b64-baae-996502bdf507"
+      }
     }
   }
 }
