@@ -4,7 +4,13 @@
     "appVersionSource": "local"
   },
   "build": {
+    "base": {
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -13,6 +19,7 @@
       }
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "credentialsSource": "local",
       "android": {
@@ -23,6 +30,7 @@
       }
     },
     "production": {
+      "extends": "base",
       "android": {
         "buildType": "app-bundle"
       }
