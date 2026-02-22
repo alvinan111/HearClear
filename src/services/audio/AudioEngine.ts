@@ -185,20 +185,20 @@ export const AudioEngine = {
       state.feedbackInterval = null;
     }
 
-    // 停止麦克风录制
+    // 先停止录制，再关闭 AudioContext
     if (state.recorder) {
       try { state.recorder.stop(); } catch { /**/ }
       state.recorder = null;
     }
-
-    state.rawAnalyser = null;
-    state.voiceAnalyser = null;
 
     if (state.ctx) {
       try { await state.ctx.close(); } catch { /**/ }
       state.ctx = null;
     }
 
+    // ctx 关闭后清空 analyser 引用
+    state.rawAnalyser = null;
+    state.voiceAnalyser = null;
     state.isRunning = false;
     useAudioStore.getState().setFeedbackFrequency(null);
   },

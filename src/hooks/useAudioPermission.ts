@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Alert, Linking, Platform } from 'react-native';
-import { useAudioRecorder, requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from 'expo-audio';
+import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from 'expo-audio';
 
 export type PermissionStatus = 'unknown' | 'granted' | 'denied' | 'blocked';
 

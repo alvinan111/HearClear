@@ -73,14 +73,3 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
   },
 }));
 
-// 补充 loadFromCache 到 store（内部使用）
-const storeRef = useConfigStore;
-// @ts-ignore internal helper
-useConfigStore.getState().loadFromCache = async () => {
-  const cached = await getItem<AppConfig>(STORAGE_KEYS.APP_CONFIG);
-  const cachedVersions = await getItem<AppVersion>(STORAGE_KEYS.APP_VERSIONS);
-  const lastSync = await getItem<string>(STORAGE_KEYS.LAST_SYNC_AT);
-  if (cached) {
-    storeRef.setState({ config: cached, versions: cachedVersions, lastSyncAt: lastSync });
-  }
-};
