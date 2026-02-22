@@ -6,7 +6,9 @@
   "build": {
     "base": {
       "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://reiirfhljlepxiibojzh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlaWlyZmhsamxlcHhpaWJvanpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MDEsImV4cCI6MjA4NzI5NzgwMX0.-AhYX0zpVSBj-gf_v6gdOQMZChKltOQNHUDXc0biLPY"
       }
     },
     "development": {
