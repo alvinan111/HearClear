@@ -56,6 +56,10 @@ const en: TranslationKeys = {
       title: 'Audio Settings',
       resetDefaults: 'Reset to Defaults',
       paramsHint: 'Volume, voice enhance, and noise reduction can be adjusted on the home screen.',
+      scene: 'Scene',
+      sceneDefault: 'Default',
+      sceneTv: 'TV Pickup',
+      sceneHint: 'TV Pickup: phone near TV, longer release and lower threshold. Restart hearing after switching.',
     },
     membership: {
       title: 'Membership',

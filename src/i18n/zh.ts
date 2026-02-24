@@ -58,6 +58,10 @@ const zh = {
       title: '音频参数',
       resetDefaults: '恢复默认',
       paramsHint: '音量、人声增强、环境降噪均可在主页实时调节。',
+      scene: '使用场景',
+      sceneDefault: '默认',
+      sceneTv: 'TV 拾音',
+      sceneHint: 'TV 拾音：手机放电视旁，较长 release、稍低阈值。切换后需重新开启助听生效。',
     },
     membership: {
       title: '我的会员',

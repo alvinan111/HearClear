@@ -564,11 +564,12 @@ export default function HomeScreen() {
   const { isConnected: headphoneConnected } = useHeadphoneDetection();
 
   const prevConnected = useRef(headphoneConnected);
+  const hasAutoStarted = useRef(false);
 
   // ── 初始化后台服务
   useEffect(() => { initBackgroundService().catch(() => {}); }, []);
 
-  // ── 同步耳机状态到 store + 自动切换模式
+  // ── 同步耳机状态到 store + 自动切换模式 + 无耳机时静音输出（继续采集）
   useEffect(() => {
     setHeadphoneConnected(headphoneConnected);
 
@@ -581,7 +582,42 @@ export default function HomeScreen() {
     if (!headphoneConnected && was) {
       updateParams({ headphoneMode: HeadphoneMode.NORMAL });
     }
-  }, [headphoneConnected]);
+    // 无耳机时：只采集不输出
+    if (status === 'running') {
+      AudioEngine.setOutputMuted(!headphoneConnected);
+    }
+  }, [headphoneConnected, status]);
+
+  // ── 进入首页时自动开启引擎（无需再点一次）
+  useEffect(() => {
+    if (hasAutoStarted.current) return;
+    hasAutoStarted.current = true;
+
+    const doAutoStart = async () => {
+      const { status: s, params: p } = useAudioStore.getState();
+      if (s === 'running' || s === 'starting') return;
+      if (useSubscriptionStore.getState().showPaywall) return;
+
+      const ok = await requestPermission();
+      if (!ok) return;
+
+      setStatus('starting');
+      setError(null);
+      const latestParams = useAudioStore.getState().params;
+      const result = await AudioEngine.start(latestParams);
+      if (result.error) {
+        setStatus('error');
+        setError(result.error);
+      } else {
+        setStatus('running');
+        const connected = useAudioStore.getState().headphoneConnected;
+        AudioEngine.setOutputMuted(!connected);
+        await startBackgroundAudio().catch(() => {});
+      }
+    };
+
+    doAutoStart();
+  }, []);
 
   const isRunning = status === 'running';
   const isStarting = status === 'starting';
@@ -617,6 +653,7 @@ export default function HomeScreen() {
       setError(result.error);
     } else {
       setStatus('running');
+      AudioEngine.setOutputMuted(!headphoneConnected);
       await startBackgroundAudio().catch(() => {});
     }
   }, [isRunning, isStarting, headphoneConnected, params, showPaywall]);
@@ -638,10 +675,10 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* ── 耳机/外放状态提示 */}
+          {/* ── 耳机/外放状态提示：无耳机时仅提示，继续采集不输出 */}
           <View style={styles.statusHintRow}>
             <Text style={[styles.statusHintText, { color: headphoneConnected ? COLORS.success : COLORS.textMuted }]}>
-              {headphoneConnected ? '🎧 已连接耳机' : '📢 未连接耳机，建议连接耳机使用'}
+              {headphoneConnected ? '🎧 已连接耳机' : '📢 未连接耳机，当前仅采集不输出，连接耳机后可听到声音'}
             </Text>
           </View>
 

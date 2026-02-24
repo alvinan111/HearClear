@@ -47,7 +47,6 @@ type RecorderAdapterNode = import('react-native-audio-api').RecorderAdapterNode;
 
 // ─── 引擎内部状态 ─────────────────────────────────────────────────────────────
 const GATE_ANALYSER_FFT = 2048;
-const GATE_UPDATE_MS = 100;
 const GATE_CLOSED_GAIN = 0; // 杂音全关，只留人声
 const VOICE_BAND_LOW_HZ = 200;
 const VOICE_BAND_HIGH_HZ = 4000;
@@ -62,6 +61,8 @@ interface EngineState {
   voiceAnalyser: AnalyserNode | null;
   gateAnalyser: AnalyserNode | null;
   gateGainNode: GainNode | null;
+  /** 无耳机时置 0，只采集不输出 */
+  outputMuteGain: GainNode | null;
   gateInterval: ReturnType<typeof setInterval> | null;
   gateBuf: Float32Array;
   gateFreqBuf: Float32Array;
@@ -81,6 +82,7 @@ const state: EngineState = {
   voiceAnalyser: null,
   gateAnalyser: null,
   gateGainNode: null,
+  outputMuteGain: null,
   gateInterval: null,
   gateBuf: new Float32Array(GATE_ANALYSER_FFT),
   gateFreqBuf: new Float32Array(GATE_ANALYSER_FFT / 2),
@@ -211,7 +213,16 @@ export const AudioEngine = {
         eqFilters.push(bc);
       }
 
-      // ── 动态噪声门：人声通过、环境音压到 1%（100ms 更新，避免卡顿）────────
+      // ── 动态噪声门：人声通过、环境音压低；周期 + attack/release 由 GATE 或 SCENE_PRESETS 决定 ────
+      const scene = params.scene ?? 'default';
+      const scenePreset = AUDIO_CONFIG.SCENE_PRESETS[scene];
+      const gateUpdateMs = scenePreset.gateUpdateMs;
+      const attackSec = scenePreset.gateAttackMs / 1000;
+      const releaseSec = scenePreset.gateReleaseMs / 1000;
+      const gateSoft = AUDIO_CONFIG.GATE.SOFT_ENABLED;
+      const attackTimeConstant = Math.max(0.001, attackSec / 3);
+      const releaseTimeConstant = Math.max(0.001, releaseSec / 3);
+
       const gateAnalyser: AnalyserNode = ctx.createAnalyser();
       gateAnalyser.fftSize = GATE_ANALYSER_FFT;
       gateAnalyser.smoothingTimeConstant = 0.6;
@@ -227,8 +238,9 @@ export const AudioEngine = {
         state.gateInterval = setInterval(() => {
           const ana = state.gateAnalyser;
           const gainNode = state.gateGainNode;
-          if (!ana || !gainNode) return;
-          const sr = state.ctx?.sampleRate ?? 44100;
+          const audioCtx = state.ctx;
+          if (!ana || !gainNode || !audioCtx) return;
+          const sr = audioCtx.sampleRate ?? 44100;
           const bins = ana.frequencyBinCount;
           const hzPerBin = (sr / 2) / bins;
           ana.getFloatFrequencyData(state.gateFreqBuf);
@@ -240,9 +252,32 @@ export const AudioEngine = {
             const db = buf[i];
             if (isFinite(db) && db > -100) voiceEnergy += Math.pow(10, db / 20);
           }
-          const threshold = 0.002 + useAudioStore.getState().params.noiseGate * 0.04;
-          gainNode.gain.value = voiceEnergy > threshold ? 1 : GATE_CLOSED_GAIN;
-        }, GATE_UPDATE_MS);
+          const storeParams = useAudioStore.getState().params;
+          const currentScene = storeParams.scene ?? 'default';
+          const preset = AUDIO_CONFIG.SCENE_PRESETS[currentScene];
+          const threshold = preset.thresholdBase + storeParams.noiseGate * preset.thresholdScale;
+          const now = (audioCtx as { currentTime?: number }).currentTime ?? 0;
+
+          if (gateSoft) {
+            const targetGain = voiceEnergy > threshold
+              ? Math.min(1, 0.1 + (voiceEnergy - threshold) * 4)
+              : GATE_CLOSED_GAIN;
+            const tc = voiceEnergy > threshold ? attackTimeConstant : releaseTimeConstant;
+            if (typeof gainNode.gain.setTargetAtTime === 'function') {
+              gainNode.gain.setTargetAtTime(targetGain, now, tc);
+            } else {
+              gainNode.gain.value = targetGain;
+            }
+          } else {
+            const targetGain = voiceEnergy > threshold ? 1 : GATE_CLOSED_GAIN;
+            const tc = voiceEnergy > threshold ? attackTimeConstant : releaseTimeConstant;
+            if (typeof gainNode.gain.setTargetAtTime === 'function') {
+              gainNode.gain.setTargetAtTime(targetGain, now, tc);
+            } else {
+              gainNode.gain.value = targetGain;
+            }
+          }
+        }, gateUpdateMs);
       };
 
       // ── 主增益 ──────────────────────────────────────────────────────────
@@ -269,8 +304,13 @@ export const AudioEngine = {
       // 外放易回音→啸叫，严格限幅；耳机可略放宽以保音量
       outputLimiter.gain.value = preset.useSpeaker ? 0.7 : 0.88;
 
+      // ── 输出静音节点：无耳机时置 0，只采集不输出 ─────────────────────────
+      const outputMuteGain: GainNode = ctx.createGain();
+      outputMuteGain.gain.value = 1;
+      state.outputMuteGain = outputMuteGain;
+
       // ── 连接处理链 ───────────────────────────────────────────────────────
-      // rawA → 人声带通(180–4200) → EQ → gateAnalyser → noiseGate → mainGain → voiceA → notches → limiter → dest
+      // rawA → 人声带通(180–4200) → EQ → gateAnalyser → noiseGate → mainGain → voiceA → notches → limiter → outputMuteGain → dest
       let prev: AudioNode = rawA as unknown as AudioNode;
       prev.connect(voiceHighpass as unknown as AudioNode);
       prev = voiceHighpass as unknown as AudioNode;
@@ -290,7 +330,8 @@ export const AudioEngine = {
         prev = n as unknown as AudioNode;
       }
       (prev as AudioNode).connect(outputLimiter as unknown as AudioNode);
-      (outputLimiter as unknown as AudioNode).connect(ctx.destination as unknown as AudioNode);
+      (outputLimiter as unknown as AudioNode).connect(outputMuteGain as unknown as AudioNode);
+      (outputMuteGain as unknown as AudioNode).connect(ctx.destination as unknown as AudioNode);
 
       // ── 恢复 AudioContext（部分平台默认 suspended，不 resume 无音频）────
       await ctx.resume?.().catch(() => {});
@@ -343,8 +384,16 @@ export const AudioEngine = {
     // ctx 关闭后清空 analyser 引用
     state.rawAnalyser = null;
     state.voiceAnalyser = null;
+    state.outputMuteGain = null;
     state.isRunning = false;
     useAudioStore.getState().setFeedbackFrequency(null);
+  },
+
+  /** 无耳机时设为 true：继续采集与频谱，但不输出声音 */
+  setOutputMuted(muted: boolean): void {
+    if (state.outputMuteGain) {
+      state.outputMuteGain.gain.value = muted ? 0 : 1;
+    }
   },
 
   // ── 对外暴露频谱数据（每帧调用） ──────────────────────────────────────────

@@ -32,7 +32,7 @@ export default function SettingsScreen() {
   const { user, isAuthenticated, logout, isLoading: authLoading } = useAuthStore();
   const { subscription, isPaid, isUnlimited, isInTrial, trialDaysRemaining } = useSubscriptionStore();
   const { language, setLanguage } = useSettingsStore();
-  const { params, resetParams } = useAudioStore();
+  const { params, updateParams, resetParams, configLocked } = useAudioStore();
 
   const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'complaint' | 'other'>('bug');
   const [feedbackContent, setFeedbackContent] = useState('');
@@ -163,6 +163,29 @@ export default function SettingsScreen() {
             <Text style={styles.audioParamLabel}>🌿 {t('home.noiseReduce')}</Text>
             <Text style={styles.audioParamValue}>{Math.round(params.noiseGate * 100)}%</Text>
           </View>
+          <View style={styles.audioParamRow}>
+            <Text style={styles.audioParamLabel}>📺 {t('settings.audio.scene')}</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(['default', 'tv'] as const).map((scene) => (
+                <TouchableOpacity
+                  key={scene}
+                  disabled={configLocked}
+                  onPress={() => updateParams({ scene })}
+                  style={[
+                    styles.feedbackTypeBtn,
+                    (params.scene ?? 'default') === scene && styles.feedbackTypeBtnSelected,
+                  ]}
+                >
+                  <Text style={[styles.feedbackTypeBtnText, (params.scene ?? 'default') === scene && { color: COLORS.primary }]}>
+                    {scene === 'default' ? t('settings.audio.sceneDefault') : t('settings.audio.sceneTv')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <Text style={[styles.audioParamHint, { marginTop: -4, marginBottom: 8 }]}>
+            {t('settings.audio.sceneHint')}
+          </Text>
           <TouchableOpacity style={styles.resetBtn} onPress={handleResetParams}>
             <Text style={styles.resetBtnText}>🔄 {t('settings.audio.resetDefaults')}</Text>
           </TouchableOpacity>

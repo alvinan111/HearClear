@@ -9,6 +9,7 @@ beforeEach(() => {
       voiceEnhance: AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE,
       noiseGate: AUDIO_CONFIG.DEFAULT_NOISE_GATE,
       headphoneMode: HeadphoneMode.NORMAL,
+      scene: 'default',
     },
     status: 'idle',
     headphoneConnected: false,

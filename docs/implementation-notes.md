@@ -18,7 +18,12 @@
 - **人声**：来自 `voiceAnalyser`（带通 + EQ + 噪声门之后），用于双频谱「人声」条。
 - **双频谱 UI**：上 = 环境音（envBars），下 = 人声（voiceBars）。若标反会误导用户。
 
-### 1.2 与啸叫/卡死相关的已做取舍
+### 1.2 门控与场景（TV 拾音）
+
+- **门控**：决策周期与 attack/release 由 `AUDIO_CONFIG.GATE` 与 `AUDIO_CONFIG.SCENE_PRESETS[scene]` 决定；`params.scene === 'tv'` 时使用 TV 预设（较长 release、稍低阈值）。详见 `docs/latency-and-vad-roadmap.md`。
+- **设置**：设置页提供「场景：默认 / TV 拾音」；切换后需重新开启助听使门控时序生效。
+
+### 1.3 与啸叫/卡死相关的已做取舍
 
 - **已移除**：10ms JS 反馈环（FFT + 动态 Notch/限幅），避免主线程卡死与 ANR。
 - **保留**：固定多频点 Notch、固定输出限幅、按模式（耳机/外放）的限幅系数。
@@ -26,7 +31,7 @@
 
 详见：`docs/android-feedback-solution.md`、`docs/feedback-suppression.md`。
 
-### 1.3 频谱数据 getSpectrumData(numBars)
+### 1.4 频谱数据 getSpectrumData(numBars)
 
 - **返回值**：`{ voice: number[], env: number[] } | null`。
 - **voice**：人声频段 300–3500 Hz，来自 `voiceAnalyser`，长度 `numBars`。

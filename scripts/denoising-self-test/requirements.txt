@@ -1,0 +1,10 @@
+# 人声降噪自测脚本依赖
+# 使用: pip install -r scripts/denoising-self-test/requirements.txt
+# 无配对参考时用人声分离生成参考: pip install demucs
+numpy>=1.21,<2
+scipy>=1.7
+soundfile>=0.11
+pesq>=0.0.4
+pystoi>=0.3.3
+datasets>=2.14
+huggingface_hub>=0.17

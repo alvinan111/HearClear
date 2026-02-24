@@ -27,6 +27,8 @@ ios/
 
 # Build
 build/
+.venv-audio-test/
+.venv*/
 
 # Environment variables
 .env

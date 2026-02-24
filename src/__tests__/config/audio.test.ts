@@ -77,6 +77,40 @@ describe('AUDIO_CONFIG.FEEDBACK_SUPPRESSOR', () => {
   });
 });
 
+describe('AUDIO_CONFIG.GATE', () => {
+  it('UPDATE_MS 在 10–100ms（门控周期，影响延迟）', () => {
+    expect(AUDIO_CONFIG.GATE.UPDATE_MS).toBeGreaterThanOrEqual(10);
+    expect(AUDIO_CONFIG.GATE.UPDATE_MS).toBeLessThanOrEqual(100);
+  });
+
+  it('ATTACK_MS 与 RELEASE_MS 为正数', () => {
+    expect(AUDIO_CONFIG.GATE.ATTACK_MS).toBeGreaterThan(0);
+    expect(AUDIO_CONFIG.GATE.RELEASE_MS).toBeGreaterThan(0);
+  });
+
+  it('SOFT_ENABLED 为布尔', () => {
+    expect(typeof AUDIO_CONFIG.GATE.SOFT_ENABLED).toBe('boolean');
+  });
+});
+
+describe('AUDIO_CONFIG.SCENE_PRESETS', () => {
+  it('default 与 tv 预设都存在', () => {
+    expect(AUDIO_CONFIG.SCENE_PRESETS.default).toBeDefined();
+    expect(AUDIO_CONFIG.SCENE_PRESETS.tv).toBeDefined();
+  });
+
+  it('各预设含 gateUpdateMs / gateAttackMs / gateReleaseMs / thresholdBase / thresholdScale', () => {
+    for (const key of ['default', 'tv'] as const) {
+      const p = AUDIO_CONFIG.SCENE_PRESETS[key];
+      expect(p.gateUpdateMs).toBeGreaterThan(0);
+      expect(p.gateAttackMs).toBeGreaterThan(0);
+      expect(p.gateReleaseMs).toBeGreaterThan(0);
+      expect(p.thresholdBase).toBeGreaterThanOrEqual(0);
+      expect(p.thresholdScale).toBeGreaterThanOrEqual(0);
+    }
+  });
+});
+
 describe('AUDIO_PRESETS', () => {
   it('三种模式的预设都存在', () => {
     expect(AUDIO_PRESETS[HeadphoneMode.NORMAL]).toBeDefined();

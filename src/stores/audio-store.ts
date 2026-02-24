@@ -31,6 +31,7 @@ const DEFAULT_PARAMS: AudioParams = {
   voiceEnhance: AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE,
   noiseGate: AUDIO_CONFIG.DEFAULT_NOISE_GATE,
   headphoneMode: HeadphoneMode.NORMAL,
+  scene: 'default',
 };
 
 export const useAudioStore = create<AudioStore>((set, get) => ({

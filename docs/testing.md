@@ -22,6 +22,22 @@ npm test
 npm run test:coverage
 ```
 
+## 人声降噪自测（选做）
+
+用于在**固定测试集**或**自备带噪音频**上对比不同降噪/人声增强方案，用 PESQ/STOI 选出最佳方案。
+
+- **脚本与用法**：见 [scripts/denoising-self-test/README.md](../scripts/denoising-self-test/README.md)。
+- **测试集**：VoiceBank-DEMAND（Hugging Face，`--source voicebank`）、或本地 `--noisy` / `--clean` 配对。
+- **无参考时**：使用 `--noisy 带噪.wav --reference-from-separation`，脚本会用人声分离模型（如 Demucs）从带噪音频中分离出人声轨作为参考，再对增强结果算 PESQ/STOI。
+- **运行示例**：
+  ```bash
+  pip install -r scripts/denoising-self-test/requirements.txt
+  python scripts/denoising-self-test/run_self_test.py --source voicebank
+  ```
+  输出各方案 PESQ/STOI 表格，便于确定最佳方案。
+
+---
+
 ## 回归清单
 
 发布前建议跑通：`npm test`，并对照 `docs/recent-changes.md` 做一次手动回归。

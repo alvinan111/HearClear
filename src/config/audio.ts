@@ -6,18 +6,49 @@ export const AUDIO_CONFIG = {
   /** 采样率 */
   SAMPLE_RATE: 44100,
 
-  /** 默认增益（dB）：助听核心，默认约 4 倍放大（+12dB） */
+  /** 默认增益（dB）：人声放大 4 倍（+12dB） */
   DEFAULT_GAIN: 12,
   MIN_GAIN: 0,
   MAX_GAIN_NORMAL: 38,          // 普通耳机最大增益 dB
   MAX_GAIN_BONE_CONDUCTION: 26, // 骨传导耳机最大增益 dB
   MAX_GAIN_SPEAKER: 18,         // 外放模式：略压低上限防回音
 
-  /** 人声增强默认强度（0-1），助听默认强调人声 */
-  DEFAULT_VOICE_ENHANCE: 0.75,
+  /** 人声增强默认强度（0-1），默认拉满强调人声 */
+  DEFAULT_VOICE_ENHANCE: 1,
 
-  /** 环境音抑制（0-1）：动态噪声门，值越大环境音压得越低，默认压到约 1% */
-  DEFAULT_NOISE_GATE: 0.95,
+  /** 环境音抑制（0-1）：1 = 全部过滤掉（噪声门关时增益为 0） */
+  DEFAULT_NOISE_GATE: 1,
+
+  /** 噪声门控（见 docs/latency-and-vad-roadmap.md） */
+  GATE: {
+    /** 门控决策周期（ms），越小延迟越低，建议 20–30 */
+    UPDATE_MS: 25,
+    /** 门关→开渐变时间（ms），建议 10–30 */
+    ATTACK_MS: 20,
+    /** 门开→关渐变时间（ms），建议 80–150，避免句尾被切 */
+    RELEASE_MS: 120,
+    /** 是否使用软门（增益连续变化），true 时听感更自然 */
+    SOFT_ENABLED: false,
+  },
+
+  /** 场景预设：TV 拾音等，覆盖 GATE 与阈值系数（见 Phase 3） */
+  SCENE_PRESETS: {
+    default: {
+      gateUpdateMs: 25,
+      gateAttackMs: 20,
+      gateReleaseMs: 120,
+      /** 阈值 = THRESHOLD_BASE + noiseGate * THRESHOLD_SCALE */
+      thresholdBase: 0.002,
+      thresholdScale: 0.04,
+    },
+    tv: {
+      gateUpdateMs: 25,
+      gateAttackMs: 25,
+      gateReleaseMs: 150,
+      thresholdBase: 0.0015,
+      thresholdScale: 0.035,
+    },
+  } as const,
 
   /** 多段 EQ 配置（人声增强） */
   EQ_BANDS: [

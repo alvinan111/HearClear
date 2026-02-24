@@ -1,5 +1,8 @@
 import { HeadphoneMode } from '@config/audio';
 
+/** 使用场景：默认 / TV 拾音（手机放电视旁） */
+export type AudioScene = 'default' | 'tv';
+
 export interface AudioParams {
   /** 增益（放大）级别，0-20 */
   gain: number;
@@ -9,6 +12,8 @@ export interface AudioParams {
   noiseGate: number;
   /** 耳机模式 */
   headphoneMode: HeadphoneMode;
+  /** 场景预设：TV 拾音时用较长 release、稍低阈值 */
+  scene?: AudioScene;
 }
 
 export interface AudioEngineState {
