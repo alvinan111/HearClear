@@ -6,18 +6,18 @@ export const AUDIO_CONFIG = {
   /** 采样率 */
   SAMPLE_RATE: 44100,
 
-  /** 默认增益（dB） */
-  DEFAULT_GAIN: 6.0,
+  /** 默认增益（dB）：助听核心，默认约 4 倍放大（+12dB） */
+  DEFAULT_GAIN: 12,
   MIN_GAIN: 0,
-  MAX_GAIN_NORMAL: 36,          // 普通耳机最大增益 dB（显示为 200%）
-  MAX_GAIN_BONE_CONDUCTION: 24, // 骨传导耳机最大增益 dB（显示为 200%）
-  MAX_GAIN_SPEAKER: 20,         // 外放模式最大增益 dB（更低防止反馈）
+  MAX_GAIN_NORMAL: 38,          // 普通耳机最大增益 dB
+  MAX_GAIN_BONE_CONDUCTION: 26, // 骨传导耳机最大增益 dB
+  MAX_GAIN_SPEAKER: 18,         // 外放模式：略压低上限防回音
 
-  /** 人声增强默认强度（0-1） */
-  DEFAULT_VOICE_ENHANCE: 0.6,
+  /** 人声增强默认强度（0-1），助听默认强调人声 */
+  DEFAULT_VOICE_ENHANCE: 0.75,
 
-  /** 环境噪音抑制阈值（0-1，值越大过滤越激进） */
-  DEFAULT_NOISE_GATE: 0.3,
+  /** 环境音抑制（0-1）：动态噪声门，值越大环境音压得越低，默认压到约 1% */
+  DEFAULT_NOISE_GATE: 0.95,
 
   /** 多段 EQ 配置（人声增强） */
   EQ_BANDS: [
@@ -29,25 +29,37 @@ export const AUDIO_CONFIG = {
     { type: 'highshelf' as const, frequency: 8000, gain: -6, q: 1.0 },  // 压低高频噪音
   ],
 
-  /** AEC 回声消除配置 */
+  /** AEC 回声消除：依赖系统（iOS voiceChat / Android VOICE_COMMUNICATION），不能有一点回音时需启用 */
   AEC: {
-    /** 骨传导模式回声消除强度（0-1） */
-    BONE_CONDUCTION_STRENGTH: 0.9,
-    /** 普通模式回声消除强度（0-1） */
-    NORMAL_STRENGTH: 0.6,
+    BONE_CONDUCTION_STRENGTH: 0.95,
+    NORMAL_STRENGTH: 0.9,
   },
 
-  /** 自适应反馈抑制（防啸叫） */
+  /** 自适应反馈抑制（防啸叫）- 激进：核心是放大，优先杜绝啸叫 */
   FEEDBACK_SUPPRESSOR: {
-    /** 啸叫检测窗口（ms），骨传导模式更快 */
-    DETECTION_WINDOW_NORMAL: 50,
-    DETECTION_WINDOW_BONE: 30,
-    /** 啸叫能量上升阈值 */
-    THRESHOLD_DB: 15,
-    /** 检测到啸叫后自动降低的增益量（dB） */
-    AUTO_GAIN_REDUCTION: 1,
-    /** Notch 滤波器 Q 值 */
-    NOTCH_Q: 30,
+    /** 啸叫检测窗口（ms），越小反应越快 */
+    DETECTION_WINDOW_MS: 10,
+    /** 啸叫能量上升阈值（dB），越小越敏感 */
+    THRESHOLD_DB: 5,
+    /** Notch 滤波器 Q 值，越大频点越尖 */
+    NOTCH_Q: 36,
+    /** 自适应 Notch 数量（可同时压多个啸叫频点） */
+    NOTCH_COUNT: 7,
+    /** 输出限幅：超过此 dB 即压（更早触发） */
+    LIMITER_THRESHOLD_DB: -22,
+    /** 限幅时主通路乘的增益（压得更狠） */
+    LIMITER_GAIN_REDUCTION: 0.72,
+    /** 检测到啸叫的绝对门限（dB），高于此才认为在啸叫 */
+    PEAK_THRESHOLD_DB: -38,
+    /** 解除啸叫提示的门限（dB），低于此才清除 UI 提示 */
+    RELEASE_THRESHOLD_DB: -52,
+    /** 预防性固定 Notch：常见啸叫频点轻衰减（Hz, dB, Q），在自适应 Notch 前插入 */
+    PREVENTIVE_NOTCHES: [
+      { frequency: 1000, gain: -1.5, q: 0.9 },
+      { frequency: 1800, gain: -1.5, q: 0.9 },
+      { frequency: 2500, gain: -1.5, q: 0.9 },
+      { frequency: 3200, gain: -1.5, q: 0.9 },
+    ] as Array<{ frequency: number; gain: number; q: number }>,
   },
 
   /** 骨传导耳机低频补偿 */
@@ -69,29 +81,31 @@ export enum HeadphoneMode {
 export const AUDIO_PRESETS: Record<HeadphoneMode, {
   maxGain: number;
   aecStrength: number;
-  feedbackDetectionWindow: number;
   useSpeaker: boolean;
   extraEQ?: { frequency: number; gain: number; q: number };
 }> = {
   [HeadphoneMode.NORMAL]: {
     maxGain: AUDIO_CONFIG.MAX_GAIN_NORMAL,
     aecStrength: AUDIO_CONFIG.AEC.NORMAL_STRENGTH,
-    feedbackDetectionWindow: AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.DETECTION_WINDOW_NORMAL,
     useSpeaker: false,
   },
   [HeadphoneMode.BONE_CONDUCTION]: {
     maxGain: AUDIO_CONFIG.MAX_GAIN_BONE_CONDUCTION,
     aecStrength: AUDIO_CONFIG.AEC.BONE_CONDUCTION_STRENGTH,
-    feedbackDetectionWindow: AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.DETECTION_WINDOW_BONE,
     useSpeaker: false,
     extraEQ: AUDIO_CONFIG.BONE_CONDUCTION_COMPENSATION,
   },
   [HeadphoneMode.SPEAKER]: {
     maxGain: AUDIO_CONFIG.MAX_GAIN_SPEAKER,
     aecStrength: 0.95,                  // 外放需要极强 AEC 防止回声
-    feedbackDetectionWindow: AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.DETECTION_WINDOW_BONE,
     useSpeaker: true,
     // 外放模式：减少低频提升中高频清晰度
     extraEQ: { frequency: 200, gain: -4, q: 0.8 },
   },
 };
+
+/** UI 可选输出设备（仅耳机/骨传导，不含外放）— 用于首页设备选择，防止误用 SPEAKER */
+export const OUTPUT_DEVICE_OPTIONS: ReadonlyArray<HeadphoneMode> = [
+  HeadphoneMode.NORMAL,
+  HeadphoneMode.BONE_CONDUCTION,
+] as const;

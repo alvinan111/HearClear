@@ -38,56 +38,55 @@ export default function RemoteConfigPage() {
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">远程配置</h2>
-        <p className="text-slate-500 text-sm mt-1">修改后实时下发至所有用户</p>
+        <h2 className="text-2xl font-bold text-white tracking-tight">远程配置</h2>
+        <p className="text-zinc-500 text-sm mt-1">修改后实时下发至所有用户</p>
       </div>
 
-      {/* 公告快捷编辑 */}
       {announcement && (
-        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 mb-6">
+        <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-6 mb-6">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg">📢</span>
-            <h3 className="font-semibold text-indigo-900">全局公告</h3>
+            <span className="text-base">📢</span>
+            <h3 className="font-semibold text-cyan-400">全局公告</h3>
             <span className="badge badge-blue ml-auto">实时生效</span>
           </div>
           <div className="flex gap-3">
             <input type="text" value={announcement.value === null ? '' : String(announcement.value)}
               placeholder="输入公告内容（留空则不显示）"
-              className="input-base flex-1 bg-white"
+              className="input-base flex-1"
               onChange={async (e) => {
                 await supabase.from('app_config').update({ value: e.target.value || null }).eq('key', 'announcement');
                 fetchConfigs();
               }} />
             <button onClick={async () => { await supabase.from('app_config').update({ value: null }).eq('key', 'announcement'); fetchConfigs(); }}
-              className="px-4 py-2.5 bg-white border border-indigo-200 rounded-xl text-sm text-indigo-700 hover:bg-indigo-100 font-medium transition-colors">
+              className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-zinc-400 hover:bg-white/10 font-medium transition-colors">
               清除
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f11] overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-48 text-slate-400">
+          <div className="flex items-center justify-center h-48 text-zinc-500">
             <svg className="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>加载中...
           </div>
         ) : (
           <table className="w-full">
-            <thead><tr className="bg-slate-50 border-b border-slate-100">
+            <thead><tr className="bg-white/[0.03] border-b border-white/[0.06]">
               <th className="table-th w-48">配置键</th><th className="table-th">描述</th>
               <th className="table-th">当前值</th><th className="table-th w-32">操作</th>
             </tr></thead>
             <tbody className="divide-y divide-slate-50">
               {configs.map((c) => (
-                <tr key={c.key} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="table-td font-mono text-xs text-indigo-600">{c.key}</td>
-                  <td className="table-td text-slate-400 text-xs">{c.description ?? '—'}</td>
+                <tr key={c.key} className="hover:bg-white/[0.03] transition-colors">
+                  <td className="table-td font-mono text-xs text-cyan-400">{c.key}</td>
+                  <td className="table-td text-zinc-500 text-xs">{c.description ?? '—'}</td>
                   <td className="table-td">
                     {editingKey === c.key ? (
                       <textarea value={editingValue} onChange={e => setEditingValue(e.target.value)} rows={3}
-                        className="w-full border border-indigo-300 rounded-xl p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-50" />
+                        className="w-full border border-cyan-500/30 rounded-xl p-3 font-mono text-xs text-zinc-200 bg-white/5 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" />
                     ) : (
-                      <code className="text-xs bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 block max-w-sm truncate">
+                      <code className="text-xs bg-white/5 px-3 py-1.5 rounded-lg text-zinc-400 block max-w-sm truncate">
                         {JSON.stringify(c.value)}
                       </code>
                     )}
@@ -96,17 +95,17 @@ export default function RemoteConfigPage() {
                     {editingKey === c.key ? (
                       <div className="flex gap-2">
                         <button onClick={() => saveConfig(c.key)} disabled={saving}
-                          className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-colors">
+                          className="text-xs font-semibold text-black bg-cyan-500 hover:bg-cyan-400 px-3 py-1.5 rounded-lg transition-colors">
                           {saving ? '保存中...' : '保存'}
                         </button>
                         <button onClick={() => setEditingKey(null)}
-                          className="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors">
+                          className="text-xs font-semibold text-zinc-400 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors">
                           取消
                         </button>
                       </div>
                     ) : (
                       <button onClick={() => { setEditingKey(c.key); setEditingValue(JSON.stringify(c.value, null, 2)); }}
-                        className="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 px-3 py-1.5 rounded-lg transition-colors">
+                        className="text-xs font-semibold text-zinc-400 bg-white/5 hover:bg-cyan-500/15 hover:text-cyan-400 px-3 py-1.5 rounded-lg transition-colors">
                         编辑
                       </button>
                     )}

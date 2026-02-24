@@ -1,37 +1,51 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-surface: #0a0a0c;
+  --color-surface-elevated: #121214;
+  --color-surface-hover: #1a1a1e;
+  --color-border: rgba(255,255,255,0.06);
+  --color-border-hover: rgba(255,255,255,0.1);
+  --color-accent: #06b6d4;
+  --color-accent-hover: #22d3ee;
+  --color-muted: #71717a;
+  --color-text: #fafafa;
+  --color-text-secondary: #a1a1aa;
+}
+
 * { box-sizing: border-box; }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer components {
   .stat-card {
-    @apply bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow;
+    @apply bg-[#0f0f11] rounded-2xl p-6 border border-white/[0.04] hover:border-white/[0.08] transition-all duration-300;
   }
   .btn-primary {
-    @apply bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all text-sm shadow-sm hover:shadow-md;
+    @apply bg-cyan-500 hover:bg-cyan-400 text-black font-semibold py-2.5 px-5 rounded-xl transition-all text-sm;
   }
   .btn-ghost {
-    @apply text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium py-2 px-4 rounded-xl transition-all text-sm;
+    @apply text-zinc-400 hover:text-white hover:bg-white/5 font-medium py-2 px-4 rounded-xl transition-all text-sm;
   }
   .badge {
     @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
   }
-  .badge-green  { @apply bg-emerald-50 text-emerald-700; }
-  .badge-blue   { @apply bg-blue-50 text-blue-700; }
-  .badge-purple { @apply bg-violet-50 text-violet-700; }
-  .badge-amber  { @apply bg-amber-50 text-amber-700; }
-  .badge-red    { @apply bg-red-50 text-red-700; }
-  .badge-gray   { @apply bg-slate-100 text-slate-500; }
-  .table-th { @apply px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider; }
-  .table-td { @apply px-5 py-4 text-sm text-slate-700; }
+  .badge-green  { @apply bg-emerald-500/15 text-emerald-400; }
+  .badge-blue   { @apply bg-cyan-500/15 text-cyan-400; }
+  .badge-purple { @apply bg-violet-500/15 text-violet-400; }
+  .badge-amber  { @apply bg-amber-500/15 text-amber-400; }
+  .badge-red    { @apply bg-red-500/15 text-red-400; }
+  .badge-gray   { @apply bg-zinc-500/15 text-zinc-400; }
+  .table-th { @apply px-5 py-3.5 text-left text-xs font-semibold text-zinc-500 uppercase tracking-widest; }
+  .table-td { @apply px-5 py-4 text-sm text-zinc-200; }
   .input-base {
-    @apply w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition-all;
+    @apply w-full px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-zinc-200 placeholder:text-zinc-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all;
   }
 }

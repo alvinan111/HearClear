@@ -14,10 +14,11 @@ jest.mock('react-native-audio-api', () => {
   throw new Error('native not available');
 }, { virtual: true });
 
+const mockSetFeedbackFrequency = jest.fn();
 jest.mock('@stores/audio-store', () => ({
   useAudioStore: {
     getState: jest.fn(() => ({
-      setFeedbackFrequency: jest.fn(),
+      setFeedbackFrequency: mockSetFeedbackFrequency,
     })),
   },
 }));
@@ -71,5 +72,21 @@ describe('AudioEngine - Expo Go / Mock 模式', () => {
       headphoneMode: 'bone_conduction' as never,
     });
     await expect(AudioEngine.stop()).resolves.not.toThrow();
+  });
+
+  it('getSpectrumData(numBars) 未运行或 Mock 下返回 null', () => {
+    expect(AudioEngine.getSpectrumData(24)).toBeNull();
+    expect(AudioEngine.getSpectrumData(28)).toBeNull();
+  });
+
+  it('stop() 后清除啸叫频率（setFeedbackFrequency(null)）', async () => {
+    await AudioEngine.start({
+      gain: 6,
+      voiceEnhance: 0.5,
+      noiseGate: 0.2,
+      headphoneMode: 'normal' as never,
+    });
+    await AudioEngine.stop();
+    expect(mockSetFeedbackFrequency).toHaveBeenCalledWith(null);
   });
 });

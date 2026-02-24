@@ -182,6 +182,19 @@ export default function PaywallScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* 未登录提示 */}
+        {!isAuthenticated && (
+          <View style={styles.loginHintRow}>
+            <Text style={styles.loginHintText}>登录后即可订阅</Text>
+            <TouchableOpacity
+              style={styles.loginHintBtn}
+              onPress={() => router.push('/(auth)/login')}
+            >
+              <Text style={styles.loginHintBtnText}>{t('auth.title')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* 订阅按钮 */}
         <TouchableOpacity
           style={styles.subscribeButton}
@@ -191,7 +204,10 @@ export default function PaywallScreen() {
         >
           <LinearGradient colors={['#1D6FD8', '#1458B0']} style={styles.subscribeGradient}>
             {isPaying ? (
-              <ActivityIndicator size="large" color={COLORS.textInverse} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+                <ActivityIndicator size="small" color={COLORS.textInverse} />
+                <Text style={styles.subscribeText}>支付中...</Text>
+              </View>
             ) : (
               <Text style={styles.subscribeText}>
                 {t('paywall.subscribe')} — {formatPrice(prices[selectedPlan as keyof typeof prices])}
@@ -396,6 +412,21 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHT.medium,
     color: COLORS.text,
   },
+  loginHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  loginHintText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary },
+  loginHintBtn: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  loginHintBtnText: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.textInverse },
   subscribeButton: {
     borderRadius: BORDER_RADIUS.full,
     overflow: 'hidden',

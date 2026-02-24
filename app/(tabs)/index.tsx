@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,7 +24,7 @@ import { useRouter } from 'expo-router';
 import { useAudioStore } from '@stores/audio-store';
 import { useSubscriptionStore } from '@stores/subscription-store';
 import { useConfigStore } from '@stores/config-store';
-import { HeadphoneMode, AUDIO_CONFIG } from '@config/audio';
+import { HeadphoneMode, AUDIO_CONFIG, OUTPUT_DEVICE_OPTIONS } from '@config/audio';
 import { COLORS, FONT_SIZE, FONT_WEIGHT, SPACING, BORDER_RADIUS } from '@constants/theme';
 
 import Constants from 'expo-constants';
@@ -48,26 +49,26 @@ function DualSpectrum() {
 
   return (
     <View style={specStyles.wrap}>
-      {/* 标签 */}
+      {/* 标签：上=环境音，下=人声（与条对应一致） */}
       <View style={specStyles.labelRow}>
-        <Text style={[specStyles.label, { color: COLORS.success }]}>人声</Text>
         <Text style={[specStyles.label, { color: COLORS.warning }]}>环境音</Text>
+        <Text style={[specStyles.label, { color: COLORS.success }]}>人声</Text>
       </View>
 
       {/* 双频谱区域 */}
       <View style={specStyles.specWrap}>
-        {/* 人声（朝上） */}
+        {/* 环境音（朝上） */}
         <View style={specStyles.halfUp}>
           <View style={specStyles.barsUp}>
-            {voiceBars.map((v, i) => (
+            {envBars.map((v, i) => (
               <View
                 key={i}
                 style={[
                   specStyles.barUp,
                   {
                     height: Math.max(2, v * BAR_MAX_H),
-                    backgroundColor: COLORS.success,
-                    opacity: 0.25 + v * 0.75,
+                    backgroundColor: COLORS.warning,
+                    opacity: 0.2 + v * 0.8,
                   },
                 ]}
               />
@@ -85,18 +86,18 @@ function DualSpectrum() {
           </View>
         </View>
 
-        {/* 环境音（朝下） */}
+        {/* 人声（朝下） */}
         <View style={specStyles.halfDown}>
           <View style={specStyles.barsDown}>
-            {envBars.map((v, i) => (
+            {voiceBars.map((v, i) => (
               <View
                 key={i}
                 style={[
                   specStyles.barDown,
                   {
                     height: Math.max(2, v * BAR_MAX_H),
-                    backgroundColor: COLORS.warning,
-                    opacity: 0.2 + v * 0.8,
+                    backgroundColor: COLORS.success,
+                    opacity: 0.25 + v * 0.75,
                   },
                 ]}
               />
@@ -125,7 +126,7 @@ const specStyles = StyleSheet.create({
   label: { fontSize: 11, fontWeight: '700', letterSpacing: 2 },
   specWrap: { gap: 0 },
 
-  // 人声（上半）
+  // 环境音（上半）
   halfUp: { height: BAR_MAX_H, justifyContent: 'flex-end' },
   barsUp: {
     flexDirection: 'row',
@@ -146,7 +147,7 @@ const specStyles = StyleSheet.create({
   },
   freqTxt: { fontSize: 9, color: COLORS.textMuted, fontVariant: ['tabular-nums'] },
 
-  // 环境音（下半）
+  // 人声（下半）
   halfDown: { height: BAR_MAX_H, justifyContent: 'flex-start' },
   barsDown: {
     flexDirection: 'row',
@@ -386,105 +387,84 @@ function SciFiPowerButton({ status, onPress }: { status: BtnStatus; onPress: () 
   );
 }
 
-// ─── 科技风可拖动滑块（纯 React state，无动画，即时响应）────────────────────
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
-
+// ─── 简单滑块：无动画，直接跟随触摸 ─────────────────────────────────────────
 const THUMB_SIZE = 28;
 const TRACK_H = 6;
 
-function TechSlider({
+function SimpleSlider({
   icon, label, value, onChange, disabled = false, displayMax = 100, color = COLORS.primary,
 }: {
   icon: string; label: string; value: number;
   onChange: (v: number) => void;
   disabled?: boolean; displayMax?: number; color?: string;
 }) {
-  // 全部用 React state —— setPos 同步触发重渲染，零延迟
-  const [pos, setPos] = React.useState(value);
-  const trackW = useSharedValue(0);
-  const startPos = useSharedValue(value);
-  const dragging = useSharedValue(false);
+  const trackWidthRef = useRef(0);
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
+  const displayPct = Math.round(value * displayMax);
 
-  // prop 变化时（非拖动期间）同步
-  useEffect(() => {
-    if (!dragging.value) setPos(value);
-  }, [value]);
-
-  const handleUpdate = useCallback((v: number) => {
-    setPos(v);
-    onChange(v);
-  }, [onChange]);
-
-  const gesture = Gesture.Pan()
-    .enabled(!disabled)
-    .minDistance(0)
-    .onBegin(() => {
-      'worklet';
-      startPos.value = dragging.value ? startPos.value : pos; // 取当前值快照
-      dragging.value = true;
+  const pan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => !disabledRef.current,
+      onMoveShouldSetPanResponder: () => !disabledRef.current,
+      onPanResponderGrant: (e) => {
+        if (disabledRef.current || trackWidthRef.current <= 0) return;
+        const x = e.nativeEvent.locationX;
+        const v = Math.max(0, Math.min(1, x / trackWidthRef.current));
+        onChange(v);
+      },
+      onPanResponderMove: (e) => {
+        if (disabledRef.current || trackWidthRef.current <= 0) return;
+        const x = e.nativeEvent.locationX;
+        const v = Math.max(0, Math.min(1, x / trackWidthRef.current));
+        onChange(v);
+      },
     })
-    .onUpdate((e) => {
-      'worklet';
-      if (trackW.value <= 0) return;
-      const next = Math.max(0, Math.min(1, startPos.value + e.translationX / trackW.value));
-      runOnJS(handleUpdate)(next);
-    })
-    .onEnd(() => {
-      'worklet';
-      dragging.value = false;
-    });
-
-  const pct = pos * 100;
+  ).current;
 
   return (
     <View style={[sliderStyles.row, disabled && sliderStyles.disabled]}>
-      {/* 标签行 */}
       <View style={sliderStyles.header}>
         <Text style={sliderStyles.icon}>{icon}</Text>
         <Text style={sliderStyles.label}>{label}</Text>
-        <Text style={[sliderStyles.value, { color }]}>{Math.round(pos * displayMax)}%</Text>
+        <Text style={[sliderStyles.value, { color }]} accessible accessibilityLabel={`${label} ${displayPct}%`}>
+          {displayPct}%
+        </Text>
       </View>
 
-      {/* 轨道区域（GestureDetector 包裹整体轨道，更大触控面积） */}
-      <GestureDetector gesture={gesture}>
+      <View
+        style={sliderStyles.trackWrap}
+        onLayout={(e) => { trackWidthRef.current = e.nativeEvent.layout.width; }}
+        {...pan.panHandlers}
+      >
+        <View style={sliderStyles.trackBg} pointerEvents="none" />
         <View
-          style={sliderStyles.trackWrap}
-          onLayout={(e) => { trackW.value = e.nativeEvent.layout.width; }}
-        >
-          {/* 底轨 */}
-          <View style={sliderStyles.trackBg} />
-
-          {/* 填充（直接 width，无动画） */}
-          <View style={[sliderStyles.trackFill, { width: `${pct}%`, backgroundColor: color }]} />
-
-          {/* 刻度点 */}
-          {[0.25, 0.5, 0.75].map((v) => (
-            <View
-              key={v}
-              style={[
-                sliderStyles.tick,
-                { left: `${v * 100}%` as `${number}%`, backgroundColor: pos >= v ? color : COLORS.border },
-              ]}
-            />
-          ))}
-
-          {/* Thumb（直接 left，无动画） */}
+          style={[sliderStyles.trackFill, { width: `${value * 100}%`, backgroundColor: color }]}
+          pointerEvents="none"
+        />
+        {[0.25, 0.5, 0.75].map((v) => (
           <View
+            key={String(v)}
             style={[
-              sliderStyles.thumbHit,
-              { left: `${pct}%` as `${number}%`, transform: [{ translateX: -(THUMB_SIZE + 16) / 2 }] },
+              sliderStyles.tick,
+              { left: `${v * 100}%` as `${number}%`, backgroundColor: value >= v ? color : COLORS.border },
             ]}
-          >
-            <View style={[sliderStyles.thumbGlow, { shadowColor: color, backgroundColor: `${color}22` }]} />
-            <View style={[sliderStyles.thumbOuter, { borderColor: color }]}>
-              <View style={[sliderStyles.thumbInner, { backgroundColor: color }]} />
-            </View>
+            pointerEvents="none"
+          />
+        ))}
+        <View
+          style={[
+            sliderStyles.thumbHit,
+            { left: `${value * 100}%` as `${number}%`, transform: [{ translateX: -(THUMB_SIZE + 16) / 2 }] },
+          ]}
+          pointerEvents="none"
+        >
+          <View style={[sliderStyles.thumbOuter, { borderColor: color }]}>
+            <View style={[sliderStyles.thumbInner, { backgroundColor: color }]} />
           </View>
         </View>
-      </GestureDetector>
+      </View>
 
-      {/* 范围标注 */}
       <View style={sliderStyles.rangeRow}>
         <Text style={sliderStyles.rangeLabel}>0%</Text>
         <Text style={sliderStyles.rangeLabel}>{displayMax}%</Text>
@@ -494,17 +474,18 @@ function TechSlider({
 }
 
 const sliderStyles = StyleSheet.create({
-  row: { marginBottom: 22 },
+  row: { marginBottom: 22, overflow: 'hidden' },
   disabled: { opacity: 0.35 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 },
   icon: { fontSize: 18 },
   label: { flex: 1, fontSize: 14, color: COLORS.textSecondary },
-  value: { fontSize: 18, fontWeight: '700', fontVariant: ['tabular-nums'], minWidth: 52, textAlign: 'right' },
+  value: { fontSize: 18, fontWeight: '700', fontVariant: ['tabular-nums'], minWidth: 44, maxWidth: 56, textAlign: 'right' },
 
   trackWrap: {
     height: THUMB_SIZE + 20,
     justifyContent: 'center',
     position: 'relative',
+    marginHorizontal: (THUMB_SIZE + 16) / 2,
   },
   trackBg: {
     position: 'absolute',
@@ -573,7 +554,7 @@ export default function HomeScreen() {
   const router = useRouter();
 
   const {
-    status, params, configLocked, feedbackFrequency,
+    status, params, configLocked, feedbackFrequency, error,
     setStatus, setError, updateParams, setHeadphoneConnected,
   } = useAudioStore();
 
@@ -594,28 +575,23 @@ export default function HomeScreen() {
     const was = prevConnected.current;
     prevConnected.current = headphoneConnected;
 
-    if (headphoneConnected && !was) {
-      // 耳机接入 → 自动从外放切换到普通耳机模式
-      if (params.headphoneMode === HeadphoneMode.SPEAKER) {
-        updateParams({ headphoneMode: HeadphoneMode.NORMAL });
-      }
-    } else if (!headphoneConnected && was) {
-      // 耳机拔出 → 自动切换到外放
-      updateParams({ headphoneMode: HeadphoneMode.SPEAKER });
+    if (params.headphoneMode === HeadphoneMode.SPEAKER) {
+      updateParams({ headphoneMode: HeadphoneMode.NORMAL });
+    }
+    if (!headphoneConnected && was) {
+      updateParams({ headphoneMode: HeadphoneMode.NORMAL });
     }
   }, [headphoneConnected]);
 
   const isRunning = status === 'running';
   const isStarting = status === 'starting';
   const isBone = params.headphoneMode === HeadphoneMode.BONE_CONDUCTION;
-  const isSpeaker = params.headphoneMode === HeadphoneMode.SPEAKER;
-
-  const maxGain = isSpeaker
-    ? AUDIO_CONFIG.MAX_GAIN_SPEAKER
-    : isBone
-      ? AUDIO_CONFIG.MAX_GAIN_BONE_CONDUCTION
-      : AUDIO_CONFIG.MAX_GAIN_NORMAL;
+  const maxGain = isBone
+    ? AUDIO_CONFIG.MAX_GAIN_BONE_CONDUCTION
+    : AUDIO_CONFIG.MAX_GAIN_NORMAL;
   const gainPct = params.gain / maxGain;
+  /** 助听：100% = 2 倍（6 dB），显示刻度 0%～(maxGain/6)*100% */
+  const gainDisplayMaxPct = Math.round((maxGain / 6) * 100);
 
   // ── 开始/停止
   const handleToggle = useCallback(async () => {
@@ -632,14 +608,10 @@ export default function HomeScreen() {
     const ok = await requestPermission();
     if (!ok) return;
 
-    // 无耳机时自动外放模式
-    if (!headphoneConnected && params.headphoneMode !== HeadphoneMode.SPEAKER) {
-      updateParams({ headphoneMode: HeadphoneMode.SPEAKER });
-    }
-
     setStatus('starting');
     setError(null);
-    const result = await AudioEngine.start(params);
+    const latestParams = useAudioStore.getState().params;
+    const result = await AudioEngine.start(latestParams);
     if (result.error) {
       setStatus('error');
       setError(result.error);
@@ -666,19 +638,25 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* ── 输出设备选择（三选一） */}
+          {/* ── 耳机/外放状态提示 */}
+          <View style={styles.statusHintRow}>
+            <Text style={[styles.statusHintText, { color: headphoneConnected ? COLORS.success : COLORS.textMuted }]}>
+              {headphoneConnected ? '🎧 已连接耳机' : '📢 未连接耳机，建议连接耳机使用'}
+            </Text>
+          </View>
+
+          {/* ── 输出设备选择（仅耳机 / 骨传导，无外放） */}
           <View style={styles.deviceCard}>
             <Text style={styles.deviceCardTitle}>输出设备</Text>
             <View style={styles.deviceBtnRow}>
-              {([
-                { mode: HeadphoneMode.SPEAKER,        icon: '📢', label: '外放',   color: COLORS.primary },
-                { mode: HeadphoneMode.NORMAL,          icon: '🎧', label: '耳机',   color: COLORS.success },
-                { mode: HeadphoneMode.BONE_CONDUCTION, icon: '🦴', label: '骨传导', color: COLORS.warning },
-              ] as const).map(({ mode, icon, label, color }) => {
+              {OUTPUT_DEVICE_OPTIONS.map((mode) => {
+                const { icon, label, color } = mode === HeadphoneMode.NORMAL
+                  ? { icon: '🎧' as const, label: '耳机',   color: COLORS.success }
+                  : { icon: '🦴' as const, label: '骨传导', color: COLORS.warning };
                 const active = params.headphoneMode === mode;
                 return (
                   <TouchableOpacity
-                    key={mode}
+                    key={String(mode)}
                     style={[
                       styles.deviceBtn,
                       active && { borderColor: color, backgroundColor: `${color}18` },
@@ -706,11 +684,27 @@ export default function HomeScreen() {
 
           {/* ── 双频谱（人声 / 环境音）*/}
           <DualSpectrum />
+          <Text style={styles.spectrumHint}>环境音向上，人声向下；100Hz～8kHz</Text>
 
           {/* ── 反馈抑制提示 */}
           {feedbackFrequency != null && (
             <View style={styles.alertRow}>
-              <Text style={styles.alertTxt}>🔕 检测到啸叫 {Math.round(feedbackFrequency)} Hz — 自动抑制中</Text>
+              <Text style={styles.alertTxt}>
+                检测到啸叫（约 {Math.round(feedbackFrequency)} Hz），已自动抑制。若持续存在请调整耳机佩戴或降低音量。
+              </Text>
+            </View>
+          )}
+
+          {/* ── 启动失败错误展示 */}
+          {status === 'error' && error && (
+            <View style={styles.errorRow}>
+              <Text style={styles.errorTxt}>{error.message ?? t('home.errors.engineError')}</Text>
+              <TouchableOpacity
+                style={styles.retryBtn}
+                onPress={() => { setError(null); setStatus('idle'); }}
+              >
+                <Text style={styles.retryBtnText}>{t('common.retry')}</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -727,19 +721,19 @@ export default function HomeScreen() {
               <Text style={styles.paramsTitle}>/ 音效参数 /</Text>
               {configLocked && <Text style={styles.lockedTxt}>🔒 离线锁定</Text>}
             </View>
-            <TechSlider
-              icon="🔊" label="音量增益" value={gainPct} displayMax={200}
+            <SimpleSlider
+              icon="🔊" label="音量增益" value={gainPct} displayMax={gainDisplayMaxPct}
               color={COLORS.primary}
               disabled={configLocked}
               onChange={(v) => updateParams({ gain: v * maxGain })}
             />
-            <TechSlider
+            <SimpleSlider
               icon="🎙" label="人声增强" value={params.voiceEnhance}
               color={COLORS.success}
               disabled={configLocked}
               onChange={(v) => updateParams({ voiceEnhance: v })}
             />
-            <TechSlider
+            <SimpleSlider
               icon="🌿" label="环境降噪" value={params.noiseGate}
               color={COLORS.warning}
               disabled={configLocked}
@@ -819,6 +813,14 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
   },
+  deviceMismatchHint: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  statusHintRow: { marginBottom: 8 },
+  statusHintText: { fontSize: 12 },
 
   // 按钮区
   btnZone: { alignItems: 'center', marginBottom: 8, marginTop: 4 },
@@ -987,6 +989,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   alertTxt: { color: COLORS.error, fontSize: 12 },
+  spectrumHint: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    marginTop: -8,
+    marginBottom: 14,
+    textAlign: 'center',
+  },
+  errorRow: {
+    backgroundColor: 'rgba(248,113,113,0.1)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.35)',
+    padding: 12,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  errorTxt: { color: COLORS.error, fontSize: 12, marginBottom: 8 },
+  retryBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+  },
+  retryBtnText: { color: '#fff', fontWeight: '600' },
   trialRow: {
     backgroundColor: 'rgba(56,189,248,0.08)',
     borderRadius: 10,

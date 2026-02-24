@@ -16,16 +16,19 @@
 import { AUDIO_CONFIG, AUDIO_PRESETS, HeadphoneMode } from '@config/audio';
 import type { AudioParams, AudioError } from '@types/audio';
 import { useAudioStore } from '@stores/audio-store';
+import { clampGainForPreset, dbToLinear as dbToLinearUtil } from '@services/audio/audioUtils';
 
 // ─── Native 模块动态加载 ──────────────────────────────────────────────────────
 let AudioContextClass: (new (options?: { sampleRate?: number }) => import('react-native-audio-api').AudioContext) | null = null;
 let AudioRecorderClass: (new () => import('react-native-audio-api').AudioRecorder) | null = null;
+let AudioManager: import('react-native-audio-api').default | null = null;
 let isNativeAvailable = false;
 
 try {
   const api = require('react-native-audio-api');
   AudioContextClass = api.AudioContext;
   AudioRecorderClass = api.AudioRecorder;
+  AudioManager = api.AudioManager;
   isNativeAvailable = !!AudioContextClass && !!AudioRecorderClass;
 } catch {
   isNativeAvailable = false;
@@ -40,27 +43,47 @@ type AudioNode = import('react-native-audio-api').AudioNode;
 type AudioRecorderType = import('react-native-audio-api').AudioRecorder;
 type RecorderAdapterNode = import('react-native-audio-api').RecorderAdapterNode;
 
+/** 啸叫抑制策略：平台 AEC + 自适应 Notch + 输出限幅，见 docs/feedback-suppression.md */
+
 // ─── 引擎内部状态 ─────────────────────────────────────────────────────────────
+const GATE_ANALYSER_FFT = 2048;
+const GATE_UPDATE_MS = 100;
+const GATE_CLOSED_GAIN = 0; // 杂音全关，只留人声
+const VOICE_BAND_LOW_HZ = 200;
+const VOICE_BAND_HIGH_HZ = 4000;
+const VOICE_BANDPASS_LOW = 180;
+const VOICE_BANDPASS_HIGH = 4200;
+
 interface EngineState {
   ctx: Ctx | null;
   recorder: AudioRecorderType | null;
   isRunning: boolean;
-  feedbackInterval: ReturnType<typeof setInterval> | null;
-  rawAnalyser: AnalyserNode | null;   // 原始麦克风（环境音）
-  voiceAnalyser: AnalyserNode | null; // 处理后（人声）
+  rawAnalyser: AnalyserNode | null;
+  voiceAnalyser: AnalyserNode | null;
+  gateAnalyser: AnalyserNode | null;
+  gateGainNode: GainNode | null;
+  gateInterval: ReturnType<typeof setInterval> | null;
+  gateBuf: Float32Array;
+  gateFreqBuf: Float32Array;
   rawBuf: Float32Array;
   voiceBuf: Float32Array;
 }
 
 const FFT_SIZE = 2048;
 
+/** Phase1：已移除 10ms JS 反馈环，避免卡死。抑啸仅用固定 Notch + 固定限幅，见 docs/android-feedback-solution.md */
+
 const state: EngineState = {
   ctx: null,
   recorder: null,
   isRunning: false,
-  feedbackInterval: null,
   rawAnalyser: null,
   voiceAnalyser: null,
+  gateAnalyser: null,
+  gateGainNode: null,
+  gateInterval: null,
+  gateBuf: new Float32Array(GATE_ANALYSER_FFT),
+  gateFreqBuf: new Float32Array(GATE_ANALYSER_FFT / 2),
   rawBuf: new Float32Array(FFT_SIZE / 2),
   voiceBuf: new Float32Array(FFT_SIZE / 2),
 };
@@ -80,11 +103,70 @@ export const AudioEngine = {
     try {
       await AudioEngine.stop();
 
+      const preset = AUDIO_PRESETS[params.headphoneMode];
+
+      // ── 1. 确保麦克风权限（react-native-audio-api 内部需要）────────────────
+      if (AudioManager?.requestRecordingPermissions) {
+        const perm = await AudioManager.requestRecordingPermissions();
+        if (perm !== 'Granted') {
+          return { error: { code: 'PERMISSION_DENIED', message: '麦克风权限未授权' } };
+        }
+      }
+
+      // ── 2. 配置音频会话（麦克风输入 + 输出路由）；iOS voiceChat 启用系统 AEC ──
+      if (AudioManager?.setAudioSessionOptions) {
+        const iosOptions: Array<'defaultToSpeaker' | 'allowBluetoothA2DP' | 'allowBluetoothHFP'> = [
+          'allowBluetoothA2DP',
+          'allowBluetoothHFP',
+        ];
+        if (preset.useSpeaker) {
+          iosOptions.push('defaultToSpeaker');
+        }
+        try {
+          (AudioManager as { setAudioSessionOptions: (o: { iosCategory: string; iosMode: string; iosOptions: string[] }) => void }).setAudioSessionOptions({
+            iosCategory: 'playAndRecord',
+            iosMode: 'voiceChat', // 启用 Voice Processing I/O，系统级回声/反馈抑制
+            iosOptions,
+          });
+        } catch {
+          AudioManager.setAudioSessionOptions({
+            iosCategory: 'playAndRecord',
+            iosMode: 'default',
+            iosOptions,
+          });
+        }
+      }
+
+      // ── 3. 激活音频会话（必须成功，否则麦克风无输入）──────────────────────
+      if (AudioManager?.setAudioSessionActivity) {
+        const ok = await AudioManager.setAudioSessionActivity(true);
+        if (!ok) {
+          console.warn('[AudioEngine] setAudioSessionActivity failed, retrying...');
+        }
+      }
+
+      // ── 4. 耳机连接时：强制使用手机内置麦克风，不用耳机上的麦 ─────────────
+      if (AudioManager?.getDevicesInfo && AudioManager?.setInputDevice) {
+        try {
+          const info = await AudioManager.getDevicesInfo();
+          const inputs = info?.availableInputs ?? [];
+          const builtIn = inputs.find(
+            (d) =>
+              /built-in|builtin|internal|phone\s*mic|microphonebuiltin|内置|手机.*麦|听筒/i.test(d.name ?? '') ||
+              /builtin|microphonebuiltin/i.test(d.category ?? '')
+          ) ?? inputs[0];
+          if (builtIn?.id) {
+            await AudioManager.setInputDevice(builtIn.id);
+          }
+        } catch {
+          // 忽略：部分机型无 getDevicesInfo/setInputDevice 或枚举失败
+        }
+      }
+
       // ── 创建 AudioContext ────────────────────────────────────────────────
       const ctx = new AudioContextClass!();
       state.ctx = ctx;
       const sr = ctx.sampleRate;
-      const preset = AUDIO_PRESETS[params.headphoneMode];
 
       // ── 创建麦克风输入节点（正确方式：RecorderAdapterNode）────────────────
       const adapterNode: RecorderAdapterNode = ctx.createRecorderAdapter();
@@ -99,6 +181,16 @@ export const AudioEngine = {
       state.rawAnalyser = rawA;
       state.rawBuf = new Float32Array(rawA.frequencyBinCount);
       adapterNode.connect(rawA as unknown as AudioNode);
+
+      // ── 人声带通：只保留 180–4200 Hz，其余全部砍掉（杂音剔除）────────────
+      const voiceHighpass: BiquadFilterNode = ctx.createBiquadFilter();
+      voiceHighpass.type = 'highpass';
+      voiceHighpass.frequency.value = VOICE_BANDPASS_LOW;
+      voiceHighpass.Q.value = 0.7;
+      const voiceLowpass: BiquadFilterNode = ctx.createBiquadFilter();
+      voiceLowpass.type = 'lowpass';
+      voiceLowpass.frequency.value = VOICE_BANDPASS_HIGH;
+      voiceLowpass.Q.value = 0.7;
 
       // ── 人声 EQ 滤波器组 ────────────────────────────────────────────────
       const eqFilters: BiquadFilterNode[] = AUDIO_CONFIG.EQ_BANDS.map((b) => {
@@ -119,13 +211,43 @@ export const AudioEngine = {
         eqFilters.push(bc);
       }
 
-      // ── 噪音门 ──────────────────────────────────────────────────────────
+      // ── 动态噪声门：人声通过、环境音压到 1%（100ms 更新，避免卡顿）────────
+      const gateAnalyser: AnalyserNode = ctx.createAnalyser();
+      gateAnalyser.fftSize = GATE_ANALYSER_FFT;
+      gateAnalyser.smoothingTimeConstant = 0.6;
       const noiseGate: GainNode = ctx.createGain();
-      noiseGate.gain.value = 1 - params.noiseGate * 0.8;
+      noiseGate.gain.value = 1;
+      state.gateAnalyser = gateAnalyser;
+      state.gateGainNode = noiseGate;
+      state.gateBuf = new Float32Array(gateAnalyser.fftSize);
+      state.gateFreqBuf = new Float32Array(gateAnalyser.frequencyBinCount);
+
+      const startGateLoop = () => {
+        if (state.gateInterval) return;
+        state.gateInterval = setInterval(() => {
+          const ana = state.gateAnalyser;
+          const gainNode = state.gateGainNode;
+          if (!ana || !gainNode) return;
+          const sr = state.ctx?.sampleRate ?? 44100;
+          const bins = ana.frequencyBinCount;
+          const hzPerBin = (sr / 2) / bins;
+          ana.getFloatFrequencyData(state.gateFreqBuf);
+          const buf = state.gateFreqBuf;
+          const lowBin = Math.max(0, Math.floor(VOICE_BAND_LOW_HZ / hzPerBin));
+          const highBin = Math.min(bins - 1, Math.ceil(VOICE_BAND_HIGH_HZ / hzPerBin));
+          let voiceEnergy = 0;
+          for (let i = lowBin; i <= highBin; i++) {
+            const db = buf[i];
+            if (isFinite(db) && db > -100) voiceEnergy += Math.pow(10, db / 20);
+          }
+          const threshold = 0.002 + useAudioStore.getState().params.noiseGate * 0.04;
+          gainNode.gain.value = voiceEnergy > threshold ? 1 : GATE_CLOSED_GAIN;
+        }, GATE_UPDATE_MS);
+      };
 
       // ── 主增益 ──────────────────────────────────────────────────────────
       const mainGain: GainNode = ctx.createGain();
-      mainGain.gain.value = dbToLinear(Math.min(params.gain, preset.maxGain));
+      mainGain.gain.value = dbToLinearUtil(clampGainForPreset(params.gain, preset.maxGain));
 
       // ── 人声分析器（处理后信号）────────────────────────────────────────
       const voiceA: AnalyserNode = ctx.createAnalyser();
@@ -134,35 +256,53 @@ export const AudioEngine = {
       state.voiceAnalyser = voiceA;
       state.voiceBuf = new Float32Array(voiceA.frequencyBinCount);
 
-      // ── 反馈抑制 Notch 滤波器 × 2 ──────────────────────────────────────
-      const notches: BiquadFilterNode[] = [0, 1].map(() => {
-        const n: BiquadFilterNode = ctx.createBiquadFilter();
+      // ── 固定抑啸：多频点 Notch 压低易啸频段 + 输出限幅（外放更严，不能有一点回音）────
+      const FIXED_NOTCH_FREQS = [1800, 2200, 2600, 3200];
+      const fixedNotches: BiquadFilterNode[] = FIXED_NOTCH_FREQS.map((freq) => {
+        const n = ctx.createBiquadFilter();
         n.type = 'notch';
-        n.frequency.value = 2000;
-        n.Q.value = AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.NOTCH_Q;
+        n.frequency.value = freq;
+        n.Q.value = 3.2;
         return n;
       });
+      const outputLimiter: GainNode = ctx.createGain();
+      // 外放易回音→啸叫，严格限幅；耳机可略放宽以保音量
+      outputLimiter.gain.value = preset.useSpeaker ? 0.7 : 0.88;
 
       // ── 连接处理链 ───────────────────────────────────────────────────────
-      // adapterNode → rawA → EQ[0..n] → noiseGate → mainGain → voiceA → notch[0] → notch[1] → destination
+      // rawA → 人声带通(180–4200) → EQ → gateAnalyser → noiseGate → mainGain → voiceA → notches → limiter → dest
       let prev: AudioNode = rawA as unknown as AudioNode;
+      prev.connect(voiceHighpass as unknown as AudioNode);
+      prev = voiceHighpass as unknown as AudioNode;
+      prev.connect(voiceLowpass as unknown as AudioNode);
+      prev = voiceLowpass as unknown as AudioNode;
       for (const f of eqFilters) {
         prev.connect(f as unknown as AudioNode);
         prev = f as unknown as AudioNode;
       }
-      prev.connect(noiseGate as unknown as AudioNode);
+      prev.connect(gateAnalyser as unknown as AudioNode);
+      (gateAnalyser as unknown as AudioNode).connect(noiseGate as unknown as AudioNode);
       (noiseGate as unknown as AudioNode).connect(mainGain as unknown as AudioNode);
       (mainGain as unknown as AudioNode).connect(voiceA as unknown as AudioNode);
-      (voiceA as unknown as AudioNode).connect(notches[0] as unknown as AudioNode);
-      (notches[0] as unknown as AudioNode).connect(notches[1] as unknown as AudioNode);
-      (notches[1] as unknown as AudioNode).connect(ctx.destination as unknown as AudioNode);
+      prev = voiceA as unknown as AudioNode;
+      for (const n of fixedNotches) {
+        prev.connect(n as unknown as AudioNode);
+        prev = n as unknown as AudioNode;
+      }
+      (prev as AudioNode).connect(outputLimiter as unknown as AudioNode);
+      (outputLimiter as unknown as AudioNode).connect(ctx.destination as unknown as AudioNode);
+
+      // ── 恢复 AudioContext（部分平台默认 suspended，不 resume 无音频）────
+      await ctx.resume?.().catch(() => {});
 
       // ── 启动麦克风录制（开始捕获声音） ──────────────────────────────────
-      recorder.start();
+      const startResult = recorder.start();
+      if (startResult?.status === 'error') {
+        const msg = (startResult as { message?: string }).message ?? '麦克风启动失败';
+        throw new Error(msg);
+      }
 
-      // ── 启动反馈检测循环 ─────────────────────────────────────────────────
-      startFeedbackLoop(ctx, notches, sr, params.headphoneMode);
-
+      startGateLoop();
       state.isRunning = true;
       return { error: null };
     } catch (e) {
@@ -180,12 +320,12 @@ export const AudioEngine = {
 
   // ── 停止 ──────────────────────────────────────────────────────────────────
   async stop(): Promise<void> {
-    if (state.feedbackInterval) {
-      clearInterval(state.feedbackInterval);
-      state.feedbackInterval = null;
+    if (state.gateInterval) {
+      clearInterval(state.gateInterval);
+      state.gateInterval = null;
     }
-
-    // 先停止录制，再关闭 AudioContext
+    state.gateAnalyser = null;
+    state.gateGainNode = null;
     if (state.recorder) {
       try { state.recorder.stop(); } catch { /**/ }
       state.recorder = null;
@@ -194,6 +334,10 @@ export const AudioEngine = {
     if (state.ctx) {
       try { await state.ctx.close(); } catch { /**/ }
       state.ctx = null;
+    }
+
+    if (AudioManager?.setAudioSessionActivity) {
+      AudioManager.setAudioSessionActivity(false).catch(() => {});
     }
 
     // ctx 关闭后清空 analyser 引用
@@ -255,51 +399,3 @@ function extractBars(
   return bars;
 }
 
-function startFeedbackLoop(
-  ctx: Ctx,
-  notches: BiquadFilterNode[],
-  sr: number,
-  mode: HeadphoneMode
-): void {
-  try {
-    const analyser: AnalyserNode = ctx.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.85;
-    (notches[notches.length - 1] as unknown as AudioNode).connect(analyser as unknown as AudioNode);
-
-    const buf = new Float32Array(analyser.frequencyBinCount);
-    const hzPerBin = (sr / 2) / buf.length;
-    const window = mode === HeadphoneMode.BONE_CONDUCTION
-      ? AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.DETECTION_WINDOW_BONE
-      : AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.DETECTION_WINDOW_NORMAL;
-
-    let prevMax = -Infinity;
-    let notchIdx = 0;
-
-    state.feedbackInterval = setInterval(() => {
-      analyser.getFloatFrequencyData(buf);
-      let maxDb = -Infinity, maxBin = 0;
-      const lo = Math.floor(300 / hzPerBin);
-      const hi = Math.floor(6000 / hzPerBin);
-      for (let i = lo; i < hi; i++) {
-        if (buf[i] > maxDb) { maxDb = buf[i]; maxBin = i; }
-      }
-      const freq = maxBin * hzPerBin;
-      const rise = maxDb - prevMax;
-      if (rise > AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.THRESHOLD_DB && maxDb > -30) {
-        const n = notches[notchIdx % notches.length];
-        n.frequency.value = freq;
-        n.gain.value = -AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.AUTO_GAIN_REDUCTION;
-        notchIdx++;
-        useAudioStore.getState().setFeedbackFrequency(freq);
-      } else if (maxDb < -50) {
-        useAudioStore.getState().setFeedbackFrequency(null);
-      }
-      prevMax = maxDb;
-    }, window);
-  } catch { /**/ }
-}
-
-function dbToLinear(db: number): number {
-  return Math.pow(10, db / 20);
-}

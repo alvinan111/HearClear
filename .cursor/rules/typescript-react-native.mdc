@@ -1,0 +1,24 @@
+---
+description: TypeScript 与 React Native/Expo 约定
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript & React Native / Expo
+
+## 语言与风格
+- 使用 TypeScript 严格模式；为函数入参和返回值写清类型，避免 `any`。
+- 组件用函数式组件 + Hooks；复杂逻辑抽成 `useCallback`/`useMemo` 或自定义 Hook。
+- 样式优先用 `StyleSheet.create`，共享颜色/间距用 `@constants/theme` 或项目常量。
+
+## 路径与导入
+- 使用配置好的路径别名（如 `@config/*`、`@stores/*`、`@services/*`），不要写深层相对路径。
+- 类型用 `import type` 引入。
+
+## React Native / Expo
+- 列表长数据用 `FlatList` 或 `FlashList`，避免用 `ScrollView` 包 `map`。
+- 手势用 `react-native-gesture-handler`；需动画时用 `react-native-reanimated`，避免主线程卡顿。
+- 真机调试：Android 用 `npx expo run:android`，需要时先 `npx expo start --clear`。
+
+## 错误与边界
+- 异步用 `try/catch` 并给出可读错误信息或用户提示；权限/网络失败要有明确反馈。

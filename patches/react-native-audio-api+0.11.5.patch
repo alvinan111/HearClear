@@ -1,0 +1,14 @@
+diff --git a/android/src/main/cpp/audioapi/android/core/AudioPlayer.cpp b/android/src/main/cpp/audioapi/android/core/AudioPlayer.cpp
+--- a/android/src/main/cpp/audioapi/android/core/AudioPlayer.cpp
++++ b/android/src/main/cpp/audioapi/android/core/AudioPlayer.cpp
+@@ -31,7 +31,10 @@ bool AudioPlayer::openAudioStream() {
+       ->setDataCallback(this)
+       ->setSampleRate(static_cast<int>(sampleRate_))
+       ->setErrorCallback(this);
++  // Route playback to earpiece/headset (voice communication, not media speaker)
++  builder.setUsage(Usage::VoiceCommunication);
++  builder.setContentType(ContentType::Speech);
+ 
+   auto result = builder.openStream(mStream_);
+   if (result != oboe::Result::OK || mStream_ == nullptr) {
+

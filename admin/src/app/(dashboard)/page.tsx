@@ -3,18 +3,13 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
 
-interface Stats {
-  totalUsers: number;
-  paidUsers: number;
-  todayRevenueCents: number;
-  pendingFeedbacks: number;
-}
+interface Stats { totalUsers: number; paidUsers: number; todayRevenueCents: number; pendingFeedbacks: number; }
 
 const QUICK = [
-  { label: '授予会员', href: '/users',    color: 'bg-violet-500', icon: '👑' },
-  { label: '发布公告', href: '/config',   color: 'bg-indigo-500', icon: '📢' },
-  { label: '推送通知', href: '/push',     color: 'bg-sky-500',    icon: '🔔' },
-  { label: '版本更新', href: '/versions', color: 'bg-emerald-500',icon: '📦' },
+  { label: '授予会员', href: '/users', color: 'from-violet-500 to-violet-600', icon: '👑' },
+  { label: '发布公告', href: '/config', color: 'from-cyan-500 to-cyan-600', icon: '📢' },
+  { label: '推送通知', href: '/push', color: 'from-sky-500 to-sky-600', icon: '🔔' },
+  { label: '版本更新', href: '/versions', color: 'from-emerald-500 to-emerald-600', icon: '📦' },
 ];
 
 export default function DashboardPage() {
@@ -46,76 +41,65 @@ export default function DashboardPage() {
   }, []);
 
   const cards = [
-    { label: '总用户数',   value: stats.totalUsers.toLocaleString(),                   icon: '👥', color: 'text-indigo-600', bg: 'bg-indigo-50',  trend: '+12%' },
-    { label: '付费会员',   value: stats.paidUsers.toLocaleString(),                    icon: '⭐', color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+8%'  },
-    { label: '今日收入',   value: `¥${(stats.todayRevenueCents / 100).toFixed(2)}`,    icon: '💰', color: 'text-amber-600',  bg: 'bg-amber-50',  trend: '+5%'  },
-    { label: '待处理反馈', value: stats.pendingFeedbacks.toLocaleString(),             icon: '💬', color: 'text-red-600',    bg: 'bg-red-50',    trend: ''     },
+    { label: '总用户数', value: stats.totalUsers.toLocaleString(), color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' },
+    { label: '付费会员', value: stats.paidUsers.toLocaleString(), color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+    { label: '今日收入', value: `¥${(stats.todayRevenueCents / 100).toFixed(2)}`, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+    { label: '待处理反馈', value: stats.pendingFeedbacks.toLocaleString(), color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20' },
   ];
 
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900">数据总览</h2>
-        <p className="text-slate-500 text-sm mt-1">欢迎使用 HearClear 管理后台</p>
+        <h2 className="text-2xl font-bold text-white tracking-tight">数据总览</h2>
+        <p className="text-zinc-500 text-sm mt-1">HearClear 运营数据一览</p>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         {cards.map((c) => (
-          <div key={c.label} className="stat-card">
-            <div className="flex items-start justify-between mb-4">
-              <div className={`w-10 h-10 ${c.bg} rounded-xl flex items-center justify-center text-xl`}>{c.icon}</div>
-              {c.trend && <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">{c.trend}</span>}
-            </div>
-            <p className={`text-3xl font-bold ${c.color} mb-1`}>
-              {loading ? <span className="inline-block w-16 h-8 bg-slate-100 rounded animate-pulse" /> : c.value}
+          <div key={c.label} className={`stat-card border ${c.border}`}>
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">{c.label}</p>
+            <p className={`text-3xl font-bold ${c.color} tabular-nums mb-1`}>
+              {loading ? <span className="inline-block w-20 h-8 bg-white/5 rounded animate-pulse" /> : c.value}
             </p>
-            <p className="text-sm text-slate-500">{c.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Quick actions */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4 uppercase tracking-wider">快速操作</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {QUICK.map((q) => (
-            <a key={q.href} href={q.href}
-               className="group flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/50 transition-all cursor-pointer">
-              <div className={`w-10 h-10 ${q.color} rounded-xl flex items-center justify-center text-xl text-white shadow-lg group-hover:scale-110 transition-transform`}>{q.icon}</div>
-              <span className="text-sm font-medium text-slate-700 group-hover:text-indigo-700">{q.label}</span>
-            </a>
-          ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f11] p-6">
+          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">快速操作</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {QUICK.map((q) => (
+              <a key={q.href} href={q.href}
+                className="group flex flex-col items-center justify-center gap-3 p-5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04] transition-all cursor-pointer">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${q.color} flex items-center justify-center text-lg shadow-lg group-hover:scale-105 transition-transform`}>{q.icon}</div>
+                <span className="text-xs font-medium text-zinc-400 group-hover:text-zinc-200">{q.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 p-6">
+          <h3 className="text-xs font-semibold text-cyan-400/80 uppercase tracking-widest mb-4">今日摘要</h3>
+          <p className="text-4xl font-bold text-white tabular-nums mb-1">{loading ? '—' : stats.paidUsers}</p>
+          <p className="text-cyan-400/70 text-sm mb-6">活跃付费用户</p>
+          <div className="flex gap-3">
+            <a href="/users" className="flex-1 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium py-2.5 px-4 text-center transition-colors border border-white/10">查看用户</a>
+            <a href="/analytics" className="flex-1 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-medium py-2.5 px-4 text-center transition-colors border border-white/10">详细统计</a>
+          </div>
         </div>
       </div>
 
-      {/* System info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4 uppercase tracking-wider">系统信息</h3>
-          <dl className="space-y-3">
-            {[
-              ['应用名称', 'HearClear - AI 助听器'],
-              ['后台版本', 'v1.0.0'],
-              ['数据库', 'Supabase PostgreSQL'],
-              ['部署平台', 'Vercel'],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between text-sm">
-                <dt className="text-slate-500">{k}</dt>
-                <dd className="font-medium text-slate-800">{v}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl shadow-sm p-6 text-white">
-          <h3 className="text-sm font-semibold text-indigo-200 mb-4 uppercase tracking-wider">今日摘要</h3>
-          <p className="text-4xl font-bold mb-1">{loading ? '—' : stats.paidUsers}</p>
-          <p className="text-indigo-200 text-sm mb-6">活跃付费用户</p>
-          <div className="flex gap-3">
-            <a href="/users" className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-medium py-2.5 px-4 rounded-xl text-center transition-colors">查看用户</a>
-            <a href="/analytics" className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm font-medium py-2.5 px-4 rounded-xl text-center transition-colors">详细统计</a>
-          </div>
-        </div>
+      <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f11] p-6">
+        <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">系统信息</h3>
+        <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[['应用名称', 'HearClear'], ['后台版本', 'v1.0.0'], ['数据库', 'Supabase'], ['部署', 'Vercel']].map(([k, v]) => (
+            <div key={k} className="flex flex-col gap-1">
+              <dt className="text-xs text-zinc-500">{k}</dt>
+              <dd className="text-sm font-medium text-zinc-200">{v}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </div>
   );

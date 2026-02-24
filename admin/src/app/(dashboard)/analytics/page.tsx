@@ -75,36 +75,35 @@ export default function AnalyticsPage() {
     fetchData();
   }, []);
 
-  if (loading) return <div className="text-center text-gray-400 py-20">加载中...</div>;
+  if (loading) return <div className="text-center text-zinc-500 py-20">加载中...</div>;
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">数据统计</h1>
+      <h1 className="text-2xl font-bold text-white tracking-tight mb-8">数据统计</h1>
 
-      {/* 近30天收入趋势 */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">近30天收入趋势（元）</h2>
+      <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f11] p-6 mb-8">
+        <h2 className="text-sm font-semibold text-zinc-300 mb-6">近30天收入趋势（元）</h2>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={dailyRevenue}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip formatter={(v: number) => `¥${v.toFixed(2)}`} />
-            <Line type="monotone" dataKey="revenue" stroke="#2563EB" strokeWidth={2} dot={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#71717a' }} />
+            <YAxis tick={{ fontSize: 12, fill: '#71717a' }} />
+            <Tooltip contentStyle={{ backgroundColor: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} formatter={(v: number) => [`¥${v.toFixed(2)}`, '收入']} />
+            <Line type="monotone" dataKey="revenue" stroke="#06b6d4" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       {/* 订阅类型分布 */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">活跃订阅类型分布</h2>
+      <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f11] p-6">
+        <h2 className="text-sm font-semibold text-zinc-300 mb-6">活跃订阅类型分布</h2>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={subDist}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="type" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Bar dataKey="count" fill="#16A34A" radius={[4, 4, 0, 0]} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="type" tick={{ fontSize: 12, fill: '#71717a' }} />
+            <YAxis tick={{ fontSize: 12, fill: '#71717a' }} />
+            <Tooltip contentStyle={{ backgroundColor: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+            <Bar dataKey="count" fill="#06b6d4" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

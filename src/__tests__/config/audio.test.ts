@@ -4,12 +4,12 @@
  * 验证配置值在合理范围内，防止误改导致音质问题。
  */
 
-import { AUDIO_CONFIG, AUDIO_PRESETS, HeadphoneMode } from '@config/audio';
+import { AUDIO_CONFIG, AUDIO_PRESETS, HeadphoneMode, OUTPUT_DEVICE_OPTIONS } from '@config/audio';
 
 describe('AUDIO_CONFIG 基础值', () => {
-  it('DEFAULT_GAIN 在合理范围（0-36 dB）', () => {
+  it('DEFAULT_GAIN 在合理范围（0-38 dB）', () => {
     expect(AUDIO_CONFIG.DEFAULT_GAIN).toBeGreaterThanOrEqual(0);
-    expect(AUDIO_CONFIG.DEFAULT_GAIN).toBeLessThanOrEqual(36);
+    expect(AUDIO_CONFIG.DEFAULT_GAIN).toBeLessThanOrEqual(38);
   });
 
   it('MAX_GAIN_NORMAL > MAX_GAIN_BONE_CONDUCTION > MAX_GAIN_SPEAKER（防止外放啸叫）', () => {
@@ -59,17 +59,21 @@ describe('AUDIO_CONFIG.FEEDBACK_SUPPRESSOR', () => {
     expect(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.THRESHOLD_DB).toBeGreaterThan(0);
   });
 
-  it('骨传导检测窗口比普通模式更短（响应更快）', () => {
-    expect(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.DETECTION_WINDOW_BONE)
-      .toBeLessThan(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.DETECTION_WINDOW_NORMAL);
+  it('检测窗口大于 0', () => {
+    expect(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.DETECTION_WINDOW_MS).toBeGreaterThan(0);
   });
 
   it('NOTCH_Q 大于 0', () => {
     expect(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.NOTCH_Q).toBeGreaterThan(0);
   });
 
-  it('AUTO_GAIN_REDUCTION 大于 0', () => {
-    expect(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.AUTO_GAIN_REDUCTION).toBeGreaterThan(0);
+  it('NOTCH_COUNT 至少 1', () => {
+    expect(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.NOTCH_COUNT).toBeGreaterThanOrEqual(1);
+  });
+
+  it('LIMITER_GAIN_REDUCTION 在 (0,1]', () => {
+    expect(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.LIMITER_GAIN_REDUCTION).toBeGreaterThan(0);
+    expect(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.LIMITER_GAIN_REDUCTION).toBeLessThanOrEqual(1);
   });
 });
 
@@ -106,6 +110,12 @@ describe('AUDIO_PRESETS', () => {
     expect(AUDIO_PRESETS[HeadphoneMode.SPEAKER].aecStrength)
       .toBeGreaterThanOrEqual(AUDIO_PRESETS[HeadphoneMode.BONE_CONDUCTION].aecStrength);
   });
+
+  it('OUTPUT_DEVICE_OPTIONS 中的模式均为 useSpeaker false（防止误开外放）', () => {
+    for (const mode of OUTPUT_DEVICE_OPTIONS) {
+      expect(AUDIO_PRESETS[mode].useSpeaker).toBe(false);
+    }
+  });
 });
 
 describe('HeadphoneMode 枚举', () => {
@@ -114,4 +124,27 @@ describe('HeadphoneMode 枚举', () => {
     expect(HeadphoneMode.BONE_CONDUCTION).toBe('bone_conduction');
     expect(HeadphoneMode.SPEAKER).toBe('speaker');
   });
+});
+
+describe('AUDIO_CONFIG 默认参数', () => {
+  it('DEFAULT_NOISE_GATE 在 [0,1] 且偏大（环境音压得低）', () => {
+    expect(AUDIO_CONFIG.DEFAULT_NOISE_GATE).toBeGreaterThanOrEqual(0);
+    expect(AUDIO_CONFIG.DEFAULT_NOISE_GATE).toBeLessThanOrEqual(1);
+    expect(AUDIO_CONFIG.DEFAULT_NOISE_GATE).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it('DEFAULT_VOICE_ENHANCE 在 [0,1]', () => {
+    expect(AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE).toBeGreaterThanOrEqual(0);
+    expect(AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('OUTPUT_DEVICE_OPTIONS', () => {
+  it('仅包含 NORMAL 与 BONE_CONDUCTION，不含 SPEAKER（UI 无外放选项）', () => {
+    expect(OUTPUT_DEVICE_OPTIONS).toContain(HeadphoneMode.NORMAL);
+    expect(OUTPUT_DEVICE_OPTIONS).toContain(HeadphoneMode.BONE_CONDUCTION);
+    expect(OUTPUT_DEVICE_OPTIONS).not.toContain(HeadphoneMode.SPEAKER);
+    expect(OUTPUT_DEVICE_OPTIONS).toHaveLength(2);
+  });
+
 });

@@ -105,6 +105,19 @@ describe('updateParams', () => {
     useAudioStore.getState().updateParams({ gain: 20 });
     expect(useAudioStore.getState().params.gain).toBe(AUDIO_CONFIG.DEFAULT_GAIN);
   });
+
+  it('可单独更新 noiseGate、voiceEnhance', () => {
+    useAudioStore.getState().updateParams({ noiseGate: 0.5 });
+    expect(useAudioStore.getState().params.noiseGate).toBe(0.5);
+    useAudioStore.getState().updateParams({ voiceEnhance: 0.8 });
+    expect(useAudioStore.getState().params.voiceEnhance).toBe(0.8);
+  });
+
+  it('updateParams 多次合并保留最后一次', () => {
+    useAudioStore.getState().updateParams({ gain: 5 });
+    useAudioStore.getState().updateParams({ gain: 10 });
+    expect(useAudioStore.getState().params.gain).toBe(10);
+  });
 });
 
 describe('resetParams', () => {

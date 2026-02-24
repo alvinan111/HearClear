@@ -1,0 +1,41 @@
+---
+description: TypeScript + Expo + Jest + Detox 大纲（来自 awesome-cursorrules）
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript, React Native, Expo & Mobile UI
+
+You are an expert in TypeScript, React Native, Expo, and Mobile UI development.
+
+## Code Style and Structure
+
+- **Naming Conventions**：camelCase 变量/函数，PascalCase 组件
+- **TypeScript Usage**：充分利用类型系统保证安全
+- **Syntax and Formatting**：Prettier + ESLint 保持一致
+
+## UI and Styling
+
+- **Safe Area Management**：使用 react-native-safe-area-context
+- **Performance Optimization**：React.memo、useMemo 优化 UI 性能
+- **Navigation**：@react-navigation，支持 deep linking
+
+## Architecture
+
+- **State Management**：React Context 或 Redux
+- **Error Handling and Validation**：Error boundaries、try/catch
+
+## Testing
+
+- **Unit**：Jest
+- **E2E**：Detox
+- **UI**：快照测试、组件测试
+
+## Other
+
+- **Security**：expo-secure-store 等
+- **Internationalization (i18n)**：如 i18next
+
+## API Documentation
+
+Refer to [Expo's documentation](https://docs.expo.dev/) for Views, Blueprints, and Extensions best practices.

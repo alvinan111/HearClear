@@ -42,6 +42,17 @@ export default function SettingsScreen() {
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const isZh = language === 'zh';
 
+  function handleResetParams() {
+    Alert.alert(
+      isZh ? '恢复默认' : 'Reset',
+      isZh ? '确定要将所有音频参数恢复为默认值？' : 'Reset all audio parameters to default?',
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.confirm'), onPress: resetParams, style: 'destructive' },
+      ]
+    );
+  }
+
   // 会员状态文字
   function getMemberStatusLabel(): string {
     if (isUnlimited) return t('settings.membership.status.unlimited');
@@ -137,6 +148,9 @@ export default function SettingsScreen() {
 
         {/* ── 音频参数 ── */}
         <SectionCard title={t('settings.audio.title')}>
+          <Text style={styles.audioParamHint}>
+            {t('settings.audio.paramsHint')}
+          </Text>
           <View style={styles.audioParamRow}>
             <Text style={styles.audioParamLabel}>🔊 {t('home.volume')}</Text>
             <Text style={styles.audioParamValue}>{Math.round(params.gain)}</Text>
@@ -149,7 +163,7 @@ export default function SettingsScreen() {
             <Text style={styles.audioParamLabel}>🌿 {t('home.noiseReduce')}</Text>
             <Text style={styles.audioParamValue}>{Math.round(params.noiseGate * 100)}%</Text>
           </View>
-          <TouchableOpacity style={styles.resetBtn} onPress={resetParams}>
+          <TouchableOpacity style={styles.resetBtn} onPress={handleResetParams}>
             <Text style={styles.resetBtnText}>🔄 {t('settings.audio.resetDefaults')}</Text>
           </TouchableOpacity>
         </SectionCard>
@@ -341,6 +355,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.lg,
     fontWeight: FONT_WEIGHT.medium,
     color: COLORS.danger,
+  },
+  audioParamHint: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
   },
   audioParamRow: {
     flexDirection: 'row',

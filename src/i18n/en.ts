@@ -55,6 +55,7 @@ const en: TranslationKeys = {
     audio: {
       title: 'Audio Settings',
       resetDefaults: 'Reset to Defaults',
+      paramsHint: 'Volume, voice enhance, and noise reduction can be adjusted on the home screen.',
     },
     membership: {
       title: 'Membership',

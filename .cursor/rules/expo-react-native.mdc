@@ -1,0 +1,20 @@
+---
+description: Expo + React Native + TypeScript 最佳实践
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Expo React Native TypeScript
+
+- **风格**：函数式、声明式 TypeScript；用 function、具名导出；接口优先于 type；避免 enum 用 map。
+- **结构**：文件内顺序——导出组件 → 子组件 → 辅助函数 → 类型/常量。
+- **UI**：用 Flexbox、useWindowDimensions 做响应式；SafeAreaProvider + SafeAreaView；a11y 用 ARIA/原生 accessibility 属性；动画用 react-native-reanimated + gesture-handler。
+- **导航**：expo-router 动态路由；深链接/Universal Links。
+- **状态**：Zustand/Context；避免滥用 useState/useEffect；用 useMemo/useCallback 减重渲染。
+- **错误**：早 return、少嵌套；全局 Error Boundary；生产环境用 Sentry 或 expo-error-reporter。
+- **测试**：Jest + React Native Testing Library；关键流程用 Detox；Expo 测试工具。
+- **安全**：敏感数据用安全存储；HTTPS；按 https://docs.expo.dev/guides/security/。
+- **i18n**：expo-localization；多语言与 RTL。
+- **发布**：expo-updates OTA；按 https://docs.expo.dev/distribution/introduction/。
+
+参考：https://docs.expo.dev/

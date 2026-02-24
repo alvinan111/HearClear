@@ -43,7 +43,7 @@ const zh = {
     announcement: '公告',
     offlineMode: '当前为离线模式，部分功能受限',
     configLocked: '联网后可调整配置',
-    noHeadphoneWarning: '请连接有线耳机后再开始助听，防止啸叫',
+    noHeadphoneWarning: '未检测到耳机，已切换为外放模式。连接耳机后可获得更好体验。',
     errors: {
       permissionDenied: '需要麦克风权限，请在设置中开启',
       noHeadphone: '请先连接耳机',
@@ -57,6 +57,7 @@ const zh = {
     audio: {
       title: '音频参数',
       resetDefaults: '恢复默认',
+      paramsHint: '音量、人声增强、环境降噪均可在主页实时调节。',
     },
     membership: {
       title: '我的会员',

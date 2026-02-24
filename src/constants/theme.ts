@@ -9,6 +9,7 @@ export const COLORS = {
 
   // 品牌蓝（主色调）
   primary: '#38BDF8',
+  primaryDark: '#0E7AB8',   // 深蓝（用于渐变）
   primaryDim: 'rgba(56,189,248,0.15)',
   primaryGlow: 'rgba(56,189,248,0.35)',
 

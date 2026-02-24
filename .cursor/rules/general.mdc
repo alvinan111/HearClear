@@ -1,0 +1,28 @@
+---
+description: 通用编码与沟通约定
+alwaysApply: true
+---
+
+# 通用约定
+
+## 沟通
+- 用户规则要求「Always respond in Chinese-simplified」时，回复使用简体中文。
+- **能直接做就直接做**：补充文档、从 awesome-cursorrules 摘规则、写 MCP/规则说明等操作，助手直接执行，不要先问「要不要我帮你做」。
+
+## 代码
+- 修改现有文件时保持既有风格与缩进；不随意重命名或删未提及的代码。
+- 新加功能优先考虑现有架构与配置（如 store、config、services），避免重复造轮子。
+- 涉及音频/助听逻辑时，注意性能：避免在 JS 主线程做高频 FFT 或短周期 setInterval，防卡顿。
+
+## 提交与测试
+- 改完关键路径后跑一次相关命令（如 `npx expo run:android` 或 `npm test`）再收尾。
+
+## 参考与验证（禁止瞎想）
+- **优先查 GitHub 高 star 项目**：实现方案、最佳实践、兼容性等，先搜 GitHub 高 star 仓库做参考（如 awesome-*、官方示例、社区标杆），再下结论或写代码；不要凭印象编。
+- **再查技术社区**：GitHub 不足时用 Stack Overflow、技术博客、官方文档、cursor.directory、npm 页等补充，有据可查。
+- **Web 类必须自测**：涉及网页、前端、H5、PWA 等时，在**本机浏览器**里跑起来做基本验证（可用的启动命令如 `npm run dev` / `npx expo start --web`）；不能只改代码不跑、不点。
+
+## 执行优先（勿让用户手动操作）
+- **能自己执行就自己执行**：需要跑的命令（如 `npm test`、`npx patch-package`、`patch -p1` 等）由助手在终端直接执行，不要只写出步骤让用户「请手动运行」。
+- **无法执行时**：先查是否有对应 **MCP 工具**或 **Cursor Skill**，按文档安装/启用后再执行；只有确实没有可用手段时才说明需用户本地操作。
+- **不默认交给用户**：避免以「请你本地执行」收尾；优先用 Shell / MCP / skill 完成。
