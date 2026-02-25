@@ -60,6 +60,7 @@ const en: TranslationKeys = {
       sceneDefault: 'Default',
       sceneTv: 'TV Pickup',
       sceneHint: 'TV Pickup: phone near TV, longer release and lower threshold. Restart hearing after switching.',
+      latencyTest: 'Latency test',
     },
     membership: {
       title: 'Membership',
@@ -102,7 +103,12 @@ const en: TranslationKeys = {
   auth: {
     title: 'Sign In',
     subtitle: 'Sign in to unlock all features',
+    loginWithPhone: 'Phone',
+    loginWithEmail: 'Email',
+    loginWithGoogle: 'Sign in with Google',
+    orDivider: 'or',
     phonePlaceholder: 'Enter your phone number',
+    emailPlaceholder: 'Enter your email',
     codePlaceholder: 'Enter verification code',
     sendCode: 'Send Code',
     resendCode: 'Resend',
@@ -114,9 +120,11 @@ const en: TranslationKeys = {
     privacy: 'Privacy Policy',
     errors: {
       invalidPhone: 'Please enter a valid phone number',
+      invalidEmail: 'Please enter a valid email',
       invalidCode: 'Please enter the 6-digit code',
       sendFailed: 'Failed to send code. Please try again.',
       loginFailed: 'Login failed. Please check your code.',
+      googleFailed: 'Google sign-in failed. Please try again.',
     },
   },
 

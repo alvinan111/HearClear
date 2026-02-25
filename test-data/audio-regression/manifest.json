@@ -1,0 +1,702 @@
+[
+  {
+    "id": "001",
+    "noisy": "noisy/001.wav",
+    "clean": "clean/001.wav",
+    "scene": "default",
+    "description": "pair 001"
+  },
+  {
+    "id": "002",
+    "noisy": "noisy/002.wav",
+    "clean": "clean/002.wav",
+    "scene": "default",
+    "description": "pair 002"
+  },
+  {
+    "id": "003",
+    "noisy": "noisy/003.wav",
+    "clean": "clean/003.wav",
+    "scene": "default",
+    "description": "pair 003"
+  },
+  {
+    "id": "004",
+    "noisy": "noisy/004.wav",
+    "clean": "clean/004.wav",
+    "scene": "default",
+    "description": "pair 004"
+  },
+  {
+    "id": "005",
+    "noisy": "noisy/005.wav",
+    "clean": "clean/005.wav",
+    "scene": "default",
+    "description": "pair 005"
+  },
+  {
+    "id": "006",
+    "noisy": "noisy/006.wav",
+    "clean": "clean/006.wav",
+    "scene": "default",
+    "description": "pair 006"
+  },
+  {
+    "id": "007",
+    "noisy": "noisy/007.wav",
+    "clean": "clean/007.wav",
+    "scene": "default",
+    "description": "pair 007"
+  },
+  {
+    "id": "008",
+    "noisy": "noisy/008.wav",
+    "clean": "clean/008.wav",
+    "scene": "default",
+    "description": "pair 008"
+  },
+  {
+    "id": "009",
+    "noisy": "noisy/009.wav",
+    "clean": "clean/009.wav",
+    "scene": "default",
+    "description": "pair 009"
+  },
+  {
+    "id": "010",
+    "noisy": "noisy/010.wav",
+    "clean": "clean/010.wav",
+    "scene": "default",
+    "description": "pair 010"
+  },
+  {
+    "id": "011",
+    "noisy": "noisy/011.wav",
+    "clean": "clean/011.wav",
+    "scene": "default",
+    "description": "pair 011"
+  },
+  {
+    "id": "012",
+    "noisy": "noisy/012.wav",
+    "clean": "clean/012.wav",
+    "scene": "default",
+    "description": "pair 012"
+  },
+  {
+    "id": "013",
+    "noisy": "noisy/013.wav",
+    "clean": "clean/013.wav",
+    "scene": "default",
+    "description": "pair 013"
+  },
+  {
+    "id": "014",
+    "noisy": "noisy/014.wav",
+    "clean": "clean/014.wav",
+    "scene": "default",
+    "description": "pair 014"
+  },
+  {
+    "id": "015",
+    "noisy": "noisy/015.wav",
+    "clean": "clean/015.wav",
+    "scene": "default",
+    "description": "pair 015"
+  },
+  {
+    "id": "016",
+    "noisy": "noisy/016.wav",
+    "clean": "clean/016.wav",
+    "scene": "default",
+    "description": "pair 016"
+  },
+  {
+    "id": "017",
+    "noisy": "noisy/017.wav",
+    "clean": "clean/017.wav",
+    "scene": "default",
+    "description": "pair 017"
+  },
+  {
+    "id": "018",
+    "noisy": "noisy/018.wav",
+    "clean": "clean/018.wav",
+    "scene": "default",
+    "description": "pair 018"
+  },
+  {
+    "id": "019",
+    "noisy": "noisy/019.wav",
+    "clean": "clean/019.wav",
+    "scene": "default",
+    "description": "pair 019"
+  },
+  {
+    "id": "020",
+    "noisy": "noisy/020.wav",
+    "clean": "clean/020.wav",
+    "scene": "default",
+    "description": "pair 020"
+  },
+  {
+    "id": "021",
+    "noisy": "noisy/021.wav",
+    "clean": "clean/021.wav",
+    "scene": "default",
+    "description": "pair 021"
+  },
+  {
+    "id": "022",
+    "noisy": "noisy/022.wav",
+    "clean": "clean/022.wav",
+    "scene": "default",
+    "description": "pair 022"
+  },
+  {
+    "id": "023",
+    "noisy": "noisy/023.wav",
+    "clean": "clean/023.wav",
+    "scene": "default",
+    "description": "pair 023"
+  },
+  {
+    "id": "024",
+    "noisy": "noisy/024.wav",
+    "clean": "clean/024.wav",
+    "scene": "default",
+    "description": "pair 024"
+  },
+  {
+    "id": "025",
+    "noisy": "noisy/025.wav",
+    "clean": "clean/025.wav",
+    "scene": "default",
+    "description": "pair 025"
+  },
+  {
+    "id": "026",
+    "noisy": "noisy/026.wav",
+    "clean": "clean/026.wav",
+    "scene": "default",
+    "description": "pair 026"
+  },
+  {
+    "id": "027",
+    "noisy": "noisy/027.wav",
+    "clean": "clean/027.wav",
+    "scene": "default",
+    "description": "pair 027"
+  },
+  {
+    "id": "028",
+    "noisy": "noisy/028.wav",
+    "clean": "clean/028.wav",
+    "scene": "default",
+    "description": "pair 028"
+  },
+  {
+    "id": "029",
+    "noisy": "noisy/029.wav",
+    "clean": "clean/029.wav",
+    "scene": "default",
+    "description": "pair 029"
+  },
+  {
+    "id": "030",
+    "noisy": "noisy/030.wav",
+    "clean": "clean/030.wav",
+    "scene": "default",
+    "description": "pair 030"
+  },
+  {
+    "id": "031",
+    "noisy": "noisy/031.wav",
+    "clean": "clean/031.wav",
+    "scene": "default",
+    "description": "pair 031"
+  },
+  {
+    "id": "032",
+    "noisy": "noisy/032.wav",
+    "clean": "clean/032.wav",
+    "scene": "default",
+    "description": "pair 032"
+  },
+  {
+    "id": "033",
+    "noisy": "noisy/033.wav",
+    "clean": "clean/033.wav",
+    "scene": "default",
+    "description": "pair 033"
+  },
+  {
+    "id": "034",
+    "noisy": "noisy/034.wav",
+    "clean": "clean/034.wav",
+    "scene": "default",
+    "description": "pair 034"
+  },
+  {
+    "id": "035",
+    "noisy": "noisy/035.wav",
+    "clean": "clean/035.wav",
+    "scene": "default",
+    "description": "pair 035"
+  },
+  {
+    "id": "036",
+    "noisy": "noisy/036.wav",
+    "clean": "clean/036.wav",
+    "scene": "default",
+    "description": "pair 036"
+  },
+  {
+    "id": "037",
+    "noisy": "noisy/037.wav",
+    "clean": "clean/037.wav",
+    "scene": "default",
+    "description": "pair 037"
+  },
+  {
+    "id": "038",
+    "noisy": "noisy/038.wav",
+    "clean": "clean/038.wav",
+    "scene": "default",
+    "description": "pair 038"
+  },
+  {
+    "id": "039",
+    "noisy": "noisy/039.wav",
+    "clean": "clean/039.wav",
+    "scene": "default",
+    "description": "pair 039"
+  },
+  {
+    "id": "040",
+    "noisy": "noisy/040.wav",
+    "clean": "clean/040.wav",
+    "scene": "default",
+    "description": "pair 040"
+  },
+  {
+    "id": "041",
+    "noisy": "noisy/041.wav",
+    "clean": "clean/041.wav",
+    "scene": "default",
+    "description": "pair 041"
+  },
+  {
+    "id": "042",
+    "noisy": "noisy/042.wav",
+    "clean": "clean/042.wav",
+    "scene": "default",
+    "description": "pair 042"
+  },
+  {
+    "id": "043",
+    "noisy": "noisy/043.wav",
+    "clean": "clean/043.wav",
+    "scene": "default",
+    "description": "pair 043"
+  },
+  {
+    "id": "044",
+    "noisy": "noisy/044.wav",
+    "clean": "clean/044.wav",
+    "scene": "default",
+    "description": "pair 044"
+  },
+  {
+    "id": "045",
+    "noisy": "noisy/045.wav",
+    "clean": "clean/045.wav",
+    "scene": "default",
+    "description": "pair 045"
+  },
+  {
+    "id": "046",
+    "noisy": "noisy/046.wav",
+    "clean": "clean/046.wav",
+    "scene": "default",
+    "description": "pair 046"
+  },
+  {
+    "id": "047",
+    "noisy": "noisy/047.wav",
+    "clean": "clean/047.wav",
+    "scene": "default",
+    "description": "pair 047"
+  },
+  {
+    "id": "048",
+    "noisy": "noisy/048.wav",
+    "clean": "clean/048.wav",
+    "scene": "default",
+    "description": "pair 048"
+  },
+  {
+    "id": "049",
+    "noisy": "noisy/049.wav",
+    "clean": "clean/049.wav",
+    "scene": "default",
+    "description": "pair 049"
+  },
+  {
+    "id": "050",
+    "noisy": "noisy/050.wav",
+    "clean": "clean/050.wav",
+    "scene": "default",
+    "description": "pair 050"
+  },
+  {
+    "id": "051",
+    "noisy": "noisy/051.wav",
+    "clean": "clean/051.wav",
+    "scene": "default",
+    "description": "pair 051"
+  },
+  {
+    "id": "052",
+    "noisy": "noisy/052.wav",
+    "clean": "clean/052.wav",
+    "scene": "default",
+    "description": "pair 052"
+  },
+  {
+    "id": "053",
+    "noisy": "noisy/053.wav",
+    "clean": "clean/053.wav",
+    "scene": "default",
+    "description": "pair 053"
+  },
+  {
+    "id": "054",
+    "noisy": "noisy/054.wav",
+    "clean": "clean/054.wav",
+    "scene": "default",
+    "description": "pair 054"
+  },
+  {
+    "id": "055",
+    "noisy": "noisy/055.wav",
+    "clean": "clean/055.wav",
+    "scene": "default",
+    "description": "pair 055"
+  },
+  {
+    "id": "056",
+    "noisy": "noisy/056.wav",
+    "clean": "clean/056.wav",
+    "scene": "default",
+    "description": "pair 056"
+  },
+  {
+    "id": "057",
+    "noisy": "noisy/057.wav",
+    "clean": "clean/057.wav",
+    "scene": "default",
+    "description": "pair 057"
+  },
+  {
+    "id": "058",
+    "noisy": "noisy/058.wav",
+    "clean": "clean/058.wav",
+    "scene": "default",
+    "description": "pair 058"
+  },
+  {
+    "id": "059",
+    "noisy": "noisy/059.wav",
+    "clean": "clean/059.wav",
+    "scene": "default",
+    "description": "pair 059"
+  },
+  {
+    "id": "060",
+    "noisy": "noisy/060.wav",
+    "clean": "clean/060.wav",
+    "scene": "default",
+    "description": "pair 060"
+  },
+  {
+    "id": "061",
+    "noisy": "noisy/061.wav",
+    "clean": "clean/061.wav",
+    "scene": "default",
+    "description": "pair 061"
+  },
+  {
+    "id": "062",
+    "noisy": "noisy/062.wav",
+    "clean": "clean/062.wav",
+    "scene": "default",
+    "description": "pair 062"
+  },
+  {
+    "id": "063",
+    "noisy": "noisy/063.wav",
+    "clean": "clean/063.wav",
+    "scene": "default",
+    "description": "pair 063"
+  },
+  {
+    "id": "064",
+    "noisy": "noisy/064.wav",
+    "clean": "clean/064.wav",
+    "scene": "default",
+    "description": "pair 064"
+  },
+  {
+    "id": "065",
+    "noisy": "noisy/065.wav",
+    "clean": "clean/065.wav",
+    "scene": "default",
+    "description": "pair 065"
+  },
+  {
+    "id": "066",
+    "noisy": "noisy/066.wav",
+    "clean": "clean/066.wav",
+    "scene": "default",
+    "description": "pair 066"
+  },
+  {
+    "id": "067",
+    "noisy": "noisy/067.wav",
+    "clean": "clean/067.wav",
+    "scene": "default",
+    "description": "pair 067"
+  },
+  {
+    "id": "068",
+    "noisy": "noisy/068.wav",
+    "clean": "clean/068.wav",
+    "scene": "default",
+    "description": "pair 068"
+  },
+  {
+    "id": "069",
+    "noisy": "noisy/069.wav",
+    "clean": "clean/069.wav",
+    "scene": "default",
+    "description": "pair 069"
+  },
+  {
+    "id": "070",
+    "noisy": "noisy/070.wav",
+    "clean": "clean/070.wav",
+    "scene": "default",
+    "description": "pair 070"
+  },
+  {
+    "id": "071",
+    "noisy": "noisy/071.wav",
+    "clean": "clean/071.wav",
+    "scene": "default",
+    "description": "pair 071"
+  },
+  {
+    "id": "072",
+    "noisy": "noisy/072.wav",
+    "clean": "clean/072.wav",
+    "scene": "default",
+    "description": "pair 072"
+  },
+  {
+    "id": "073",
+    "noisy": "noisy/073.wav",
+    "clean": "clean/073.wav",
+    "scene": "default",
+    "description": "pair 073"
+  },
+  {
+    "id": "074",
+    "noisy": "noisy/074.wav",
+    "clean": "clean/074.wav",
+    "scene": "default",
+    "description": "pair 074"
+  },
+  {
+    "id": "075",
+    "noisy": "noisy/075.wav",
+    "clean": "clean/075.wav",
+    "scene": "default",
+    "description": "pair 075"
+  },
+  {
+    "id": "076",
+    "noisy": "noisy/076.wav",
+    "clean": "clean/076.wav",
+    "scene": "default",
+    "description": "pair 076"
+  },
+  {
+    "id": "077",
+    "noisy": "noisy/077.wav",
+    "clean": "clean/077.wav",
+    "scene": "default",
+    "description": "pair 077"
+  },
+  {
+    "id": "078",
+    "noisy": "noisy/078.wav",
+    "clean": "clean/078.wav",
+    "scene": "default",
+    "description": "pair 078"
+  },
+  {
+    "id": "079",
+    "noisy": "noisy/079.wav",
+    "clean": "clean/079.wav",
+    "scene": "default",
+    "description": "pair 079"
+  },
+  {
+    "id": "080",
+    "noisy": "noisy/080.wav",
+    "clean": "clean/080.wav",
+    "scene": "default",
+    "description": "pair 080"
+  },
+  {
+    "id": "081",
+    "noisy": "noisy/081.wav",
+    "clean": "clean/081.wav",
+    "scene": "tv",
+    "description": "pair 081"
+  },
+  {
+    "id": "082",
+    "noisy": "noisy/082.wav",
+    "clean": "clean/082.wav",
+    "scene": "tv",
+    "description": "pair 082"
+  },
+  {
+    "id": "083",
+    "noisy": "noisy/083.wav",
+    "clean": "clean/083.wav",
+    "scene": "tv",
+    "description": "pair 083"
+  },
+  {
+    "id": "084",
+    "noisy": "noisy/084.wav",
+    "clean": "clean/084.wav",
+    "scene": "tv",
+    "description": "pair 084"
+  },
+  {
+    "id": "085",
+    "noisy": "noisy/085.wav",
+    "clean": "clean/085.wav",
+    "scene": "tv",
+    "description": "pair 085"
+  },
+  {
+    "id": "086",
+    "noisy": "noisy/086.wav",
+    "clean": "clean/086.wav",
+    "scene": "tv",
+    "description": "pair 086"
+  },
+  {
+    "id": "087",
+    "noisy": "noisy/087.wav",
+    "clean": "clean/087.wav",
+    "scene": "tv",
+    "description": "pair 087"
+  },
+  {
+    "id": "088",
+    "noisy": "noisy/088.wav",
+    "clean": "clean/088.wav",
+    "scene": "tv",
+    "description": "pair 088"
+  },
+  {
+    "id": "089",
+    "noisy": "noisy/089.wav",
+    "clean": "clean/089.wav",
+    "scene": "tv",
+    "description": "pair 089"
+  },
+  {
+    "id": "090",
+    "noisy": "noisy/090.wav",
+    "clean": "clean/090.wav",
+    "scene": "tv",
+    "description": "pair 090"
+  },
+  {
+    "id": "091",
+    "noisy": "noisy/091.wav",
+    "clean": "clean/091.wav",
+    "scene": "tv",
+    "description": "pair 091"
+  },
+  {
+    "id": "092",
+    "noisy": "noisy/092.wav",
+    "clean": "clean/092.wav",
+    "scene": "tv",
+    "description": "pair 092"
+  },
+  {
+    "id": "093",
+    "noisy": "noisy/093.wav",
+    "clean": "clean/093.wav",
+    "scene": "tv",
+    "description": "pair 093"
+  },
+  {
+    "id": "094",
+    "noisy": "noisy/094.wav",
+    "clean": "clean/094.wav",
+    "scene": "tv",
+    "description": "pair 094"
+  },
+  {
+    "id": "095",
+    "noisy": "noisy/095.wav",
+    "clean": "clean/095.wav",
+    "scene": "tv",
+    "description": "pair 095"
+  },
+  {
+    "id": "096",
+    "noisy": "noisy/096.wav",
+    "clean": "clean/096.wav",
+    "scene": "tv",
+    "description": "pair 096"
+  },
+  {
+    "id": "097",
+    "noisy": "noisy/097.wav",
+    "clean": "clean/097.wav",
+    "scene": "tv",
+    "description": "pair 097"
+  },
+  {
+    "id": "098",
+    "noisy": "noisy/098.wav",
+    "clean": "clean/098.wav",
+    "scene": "tv",
+    "description": "pair 098"
+  },
+  {
+    "id": "099",
+    "noisy": "noisy/099.wav",
+    "clean": "clean/099.wav",
+    "scene": "tv",
+    "description": "pair 099"
+  },
+  {
+    "id": "100",
+    "noisy": "noisy/100.wav",
+    "clean": "clean/100.wav",
+    "scene": "tv",
+    "description": "pair 100"
+  }
+]

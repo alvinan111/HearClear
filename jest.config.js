@@ -40,6 +40,7 @@ module.exports = {
     '^@utils/(.*)$':                '<rootDir>/src/utils/$1',
     '^@constants/(.*)$':            '<rootDir>/src/constants/$1',
     '^@i18n/(.*)$':                 '<rootDir>/src/i18n/$1',
+    '^app/(.*)$':                   '<rootDir>/app/$1',
     // Mock React Native 原生模块
     '^react-native$':               '<rootDir>/src/__mocks__/react-native.ts',
     '^@react-native-async-storage/async-storage$':

@@ -74,7 +74,7 @@ describe('loadCurrentUser', () => {
 describe('login', () => {
   it('登录成功', async () => {
     mockAuthService.verifyOtp.mockResolvedValue({ user: mockUser, error: null });
-    const result = await useAuthStore.getState().login('13800000001', '123456');
+    const result = await useAuthStore.getState().login('13800000001', '123456', 'phone');
     expect(result.error).toBeNull();
     const state = useAuthStore.getState();
     expect(state.user).toEqual(mockUser);
@@ -84,7 +84,7 @@ describe('login', () => {
 
   it('验证码错误时返回 error', async () => {
     mockAuthService.verifyOtp.mockResolvedValue({ user: null, error: '验证码错误' });
-    const result = await useAuthStore.getState().login('13800000001', 'wrong');
+    const result = await useAuthStore.getState().login('13800000001', 'wrong', 'phone');
     expect(result.error).toBe('验证码错误');
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
@@ -98,7 +98,7 @@ describe('login', () => {
       capturedLoading = useAuthStore.getState().isLoading;
       return { user: mockUser, error: null };
     });
-    await useAuthStore.getState().login('13800000001', '123456');
+    await useAuthStore.getState().login('13800000001', '123456', 'phone');
     expect(capturedLoading).toBe(true);
     expect(useAuthStore.getState().isLoading).toBe(false);
   });

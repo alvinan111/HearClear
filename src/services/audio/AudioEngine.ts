@@ -46,7 +46,8 @@ type RecorderAdapterNode = import('react-native-audio-api').RecorderAdapterNode;
 /** 啸叫抑制策略：平台 AEC + 自适应 Notch + 输出限幅，见 docs/feedback-suppression.md */
 
 // ─── 引擎内部状态 ─────────────────────────────────────────────────────────────
-const GATE_ANALYSER_FFT = 2048;
+/** 门控分析 FFT 大小：512 降低延迟、仍覆盖 200–4000Hz 人声；见 docs/native-audio-architecture.md */
+export const GATE_ANALYSER_FFT = 512;
 const GATE_CLOSED_GAIN = 0; // 杂音全关，只留人声
 const VOICE_BAND_LOW_HZ = 200;
 const VOICE_BAND_HIGH_HZ = 4000;

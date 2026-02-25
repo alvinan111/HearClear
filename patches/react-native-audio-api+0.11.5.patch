@@ -1,14 +1,32 @@
 diff --git a/android/src/main/cpp/audioapi/android/core/AudioPlayer.cpp b/android/src/main/cpp/audioapi/android/core/AudioPlayer.cpp
 --- a/android/src/main/cpp/audioapi/android/core/AudioPlayer.cpp
 +++ b/android/src/main/cpp/audioapi/android/core/AudioPlayer.cpp
-@@ -31,7 +31,10 @@ bool AudioPlayer::openAudioStream() {
+@@ -28,10 +28,14 @@ bool AudioPlayer::openAudioStream() {
+       ->setFormat(AudioFormat::Float)
+       ->setFormatConversionAllowed(true)
+-      ->setPerformanceMode(PerformanceMode::None)
++      ->setPerformanceMode(PerformanceMode::LowLatency)
+       ->setChannelCount(channelCount_)
+       ->setSampleRateConversionQuality(SampleRateConversionQuality::Medium)
        ->setDataCallback(this)
        ->setSampleRate(static_cast<int>(sampleRate_))
        ->setErrorCallback(this);
 +  // Route playback to earpiece/headset (voice communication, not media speaker)
 +  builder.setUsage(Usage::VoiceCommunication);
 +  builder.setContentType(ContentType::Speech);
- 
++
    auto result = builder.openStream(mStream_);
-   if (result != oboe::Result::OK || mStream_ == nullptr) {
-
+ 
+diff --git a/android/src/main/cpp/audioapi/android/core/AndroidAudioRecorder.cpp b/android/src/main/cpp/audioapi/android/core/AndroidAudioRecorder.cpp
+--- a/android/src/main/cpp/audioapi/android/core/AndroidAudioRecorder.cpp
++++ b/android/src/main/cpp/audioapi/android/core/AndroidAudioRecorder.cpp
+@@ -74,7 +74,7 @@ Result<NoneType, std::string> AndroidAudioRecorder::openAudioStream() {
+   builder.setSharingMode(oboe::SharingMode::Exclusive)
+       ->setDirection(oboe::Direction::Input)
+       ->setFormat(oboe::AudioFormat::Float)
+       ->setFormatConversionAllowed(true)
+-      ->setPerformanceMode(oboe::PerformanceMode::None)
++      ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
+       ->setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Medium)
+       ->setDataCallback(this)
+       ->setErrorCallback(this);

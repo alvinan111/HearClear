@@ -1,6 +1,7 @@
 export interface UserProfile {
   id: string;
-  phone: string;
+  phone: string | null;
+  email: string | null;
   nickname: string | null;
   avatarUrl: string | null;
   firstUseAt: string | null;
@@ -20,7 +21,11 @@ export interface AuthState {
   error: string | null;
 }
 
+export type LoginMethod = 'phone' | 'email';
+
 export interface LoginCredentials {
-  phone: string;
+  phone?: string;
+  email?: string;
   code: string;
+  method: LoginMethod;
 }

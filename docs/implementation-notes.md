@@ -1,6 +1,7 @@
 # 实现说明与约定（当前架构）
 
-本文档描述当前代码实现中的关键约定，便于排查问题和补充测试。
+本文档描述当前代码实现中的关键约定，便于排查问题和补充测试。  
+**目标原生架构**（Native C++、Oboe、无锁 Ring Buffer、AI 增强与 WDRC）见 **`docs/native-audio-architecture.md`**。
 
 ---
 
@@ -59,8 +60,8 @@
 ## 四、Android 原生补丁与安装
 
 - **补丁文件**：`patches/react-native-audio-api+0.11.5.patch`。
-  - 录音：`AndroidAudioRecorder.cpp` → `setInputPreset(VoiceCommunication)`。
-  - 播放：`AudioPlayer.cpp` → `setUsage(VoiceCommunication)`、`setContentType(Speech)`（解决耳机无声）。
+  - 播放：`AudioPlayer.cpp` → `setPerformanceMode(LowLatency)`、`setUsage(VoiceCommunication)`、`setContentType(Speech)`（低延迟 + 耳机路由）。
+  - 录音：`AndroidAudioRecorder.cpp` → `setPerformanceMode(oboe::PerformanceMode::LowLatency)`（与播放一致走低延迟路径）。
 - **应用方式**：`postinstall` 先执行 `patch-package`；若失败则回退执行：
   `cd node_modules/react-native-audio-api && patch -p1 -i ../../patches/react-native-audio-api+0.11.5.patch`
 - 重新安装依赖后若耳机仍无声，可手动执行上述 `patch` 命令。

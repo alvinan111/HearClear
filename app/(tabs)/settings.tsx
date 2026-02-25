@@ -189,6 +189,13 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.resetBtn} onPress={handleResetParams}>
             <Text style={styles.resetBtnText}>🔄 {t('settings.audio.resetDefaults')}</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.audioParamRow, { marginTop: SPACING.md }]}
+            onPress={() => router.push('/latency-test')}
+          >
+            <Text style={styles.audioParamLabel}>⏱️ {t('settings.latencyTest')}</Text>
+            <Text style={styles.audioParamValue}>→</Text>
+          </TouchableOpacity>
         </SectionCard>
 
         {/* ── 语言 ── */}

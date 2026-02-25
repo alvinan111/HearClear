@@ -1,0 +1,29 @@
+---
+description: 核心音频算法更新后必须运行回归测试并对比评分
+globs: src/services/audio/**/*.ts, src/config/audio.ts, scripts/audio-regression/**/*
+---
+
+# 音频回归测试约定
+
+## 何时触发
+
+修改以下**核心算法或配置**时，必须运行音频回归测试并做对比与评分：
+
+- 门控（噪声门）逻辑、阈值、attack/release、GATE_ANALYSER_FFT
+- EQ 配置（EQ_BANDS、多段滤波）
+- 主增益、限幅、抑啸（FEEDBACK_SUPPRESSOR、Notch）
+- 场景预设（SCENE_PRESETS、default/tv）
+- 任何「带环境音 → 去环境音留人声」的离线或实时处理逻辑
+
+## 必须执行
+
+1. 在项目根目录运行：**`npm run test:audio-regression`**（或 `node scripts/audio-regression/run.mjs`）。
+2. 查看 `test-data/audio-regression/reports/` 下新生成的报告。
+3. **对比**：将本次报告的 `summary.avg_correlation_output`、`summary.avg_snr_improvement_db` 与上一版或 `reports/baseline.json` 对比，确认评分未退化或符合预期。
+4. 若当前版本为认可基线，可将最新报告复制为 `reports/baseline.json`。
+
+## 测试集说明
+
+- 至少 **100 条** 用例：每条为「带环境音」输入 +「仅人声」参考。
+- 清单：`test-data/audio-regression/manifest.json`。
+- 样本需自行准备或从 DNS Challenge / VoiceBank+DEMAND 等下载，见 `test-data/audio-regression/README.md` 与 `docs/audio-regression-test.md`。

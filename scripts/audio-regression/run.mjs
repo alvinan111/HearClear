@@ -1,0 +1,303 @@
+#!/usr/bin/env node
+/**
+ * 音频回归测试：带环境音 → 去环境音留人声
+ * 读取 manifest.json，对每条用例加载 noisy/clean，运行离线 DSP 后与 clean 对比评分。
+ * 每次更新核心算法后运行并对比 reports/ 下报告。
+ *
+ * 用法：从项目根执行 node scripts/audio-regression/run.mjs
+ */
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import wavefile from 'wavefile';
+const WaveFile = wavefile.WaveFile || wavefile.default?.WaveFile || wavefile;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
+const REGRESSION_DIR = path.join(ROOT, 'test-data', 'audio-regression');
+const SAMPLES_DIR = path.join(REGRESSION_DIR, 'samples');
+const REPORTS_DIR = path.join(REGRESSION_DIR, 'reports');
+
+// 与 AUDIO_CONFIG 对齐（离线回归用）
+const SR = 44100;
+const GATE_FRAME_LEN = 512;
+const GATE_UPDATE_MS = 25;
+const GATE_ATTACK_MS = 20;
+const GATE_RELEASE_MS = 120;
+const THRESHOLD_BASE = 0.002;
+const THRESHOLD_SCALE = 0.04;
+const NOISE_GATE = 1;
+const MAIN_GAIN_DB = 12;
+const MAIN_GAIN_LINEAR = Math.pow(10, MAIN_GAIN_DB / 20);
+const VOICE_HP_HZ = 180;
+const VOICE_LP_HZ = 4200;
+
+// EQ_BANDS 与 src/config/audio.ts 一致
+const EQ_BANDS = [
+  { type: 'lowshelf', frequency: 100, gain: -8, q: 1.0 },
+  { type: 'peaking', frequency: 250, gain: 3, q: 1.0 },
+  { type: 'peaking', frequency: 1000, gain: 6, q: 0.8 },
+  { type: 'peaking', frequency: 2500, gain: 5, q: 1.0 },
+  { type: 'peaking', frequency: 4000, gain: 3, q: 1.2 },
+  { type: 'highshelf', frequency: 8000, gain: -6, q: 1.0 },
+];
+
+function loadWav(filePath) {
+  const buf = fs.readFileSync(filePath);
+  const wav = new WaveFile(buf);
+  wav.toBitDepth('32f');
+  const samples = wav.getSamples();
+  const ch = Array.isArray(samples) ? samples[0] : samples;
+  const sampleRate = wav.fmt.sampleRate || SR;
+  return { samples: Float32Array.from(ch), sampleRate };
+}
+
+function rms(samples, start, length) {
+  let sum = 0;
+  const end = Math.min(start + length, samples.length);
+  for (let i = start; i < end; i++) sum += samples[i] * samples[i];
+  return Math.sqrt(sum / (end - start)) || 0;
+}
+
+// ─── Biquad（Audio EQ Cookbook）────────────────────────────────────────────────
+function biquadCoeffs(type, f0, gainDb, Q, sampleRate) {
+  const w0 = 2 * Math.PI * f0 / sampleRate;
+  const cosW0 = Math.cos(w0);
+  const sinW0 = Math.sin(w0);
+  const A = type === 'peaking' || type === 'lowshelf' || type === 'highshelf'
+    ? Math.pow(10, gainDb / 40) : 1;
+  const alpha = sinW0 / (2 * Q);
+
+  let b0 = 1, b1 = 0, b2 = 0, a0 = 1, a1 = 0, a2 = 0;
+  if (type === 'peaking') {
+    b0 = 1 + alpha * A;
+    b1 = -2 * cosW0;
+    b2 = 1 - alpha * A;
+    a0 = 1 + alpha / A;
+    a1 = -2 * cosW0;
+    a2 = 1 - alpha / A;
+  } else if (type === 'lowshelf') {
+    const sqrtA2 = 2 * Math.sqrt(A) * alpha;
+    b0 = A * ((A + 1) - (A - 1) * cosW0 + sqrtA2);
+    b1 = 2 * A * ((A - 1) - (A + 1) * cosW0);
+    b2 = A * ((A + 1) - (A - 1) * cosW0 - sqrtA2);
+    a0 = (A + 1) + (A - 1) * cosW0 + sqrtA2;
+    a1 = -2 * ((A - 1) + (A + 1) * cosW0);
+    a2 = (A + 1) + (A - 1) * cosW0 - sqrtA2;
+  } else if (type === 'highshelf') {
+    const sqrtA2 = 2 * Math.sqrt(A) * alpha;
+    b0 = A * ((A + 1) + (A - 1) * cosW0 + sqrtA2);
+    b1 = -2 * A * ((A - 1) + (A + 1) * cosW0);
+    b2 = A * ((A + 1) + (A - 1) * cosW0 - sqrtA2);
+    a0 = (A + 1) - (A - 1) * cosW0 + sqrtA2;
+    a1 = 2 * ((A - 1) - (A + 1) * cosW0);
+    a2 = (A + 1) - (A - 1) * cosW0 - sqrtA2;
+  } else if (type === 'highpass') {
+    b0 = (1 + cosW0) / 2;
+    b1 = -(1 + cosW0);
+    b2 = (1 + cosW0) / 2;
+    a0 = 1 + alpha;
+    a1 = -2 * cosW0;
+    a2 = 1 - alpha;
+  } else if (type === 'lowpass') {
+    b0 = (1 - cosW0) / 2;
+    b1 = 1 - cosW0;
+    b2 = (1 - cosW0) / 2;
+    a0 = 1 + alpha;
+    a1 = -2 * cosW0;
+    a2 = 1 - alpha;
+  }
+  return { b0, b1, b2, a0, a1, a2 };
+}
+
+function processBiquad(samples, coeffs) {
+  const { b0, b1, b2, a0, a1, a2 } = coeffs;
+  const out = new Float32Array(samples.length);
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const x0 = samples[i];
+    const y0 = (b0 / a0) * x0 + (b1 / a0) * x1 + (b2 / a0) * x2 - (a1 / a0) * y1 - (a2 / a0) * y2;
+    out[i] = y0;
+    x2 = x1; x1 = x0; y2 = y1; y1 = y0;
+  }
+  return out;
+}
+
+/** 多段 EQ 链 */
+function applyEq(samples, sampleRate) {
+  let buf = samples;
+  for (const band of EQ_BANDS) {
+    const coeffs = biquadCoeffs(band.type, band.frequency, band.gain, band.q, sampleRate);
+    buf = processBiquad(buf, coeffs);
+  }
+  return buf;
+}
+
+/** 人声带通（仅用于门控检测）：180–4200 Hz */
+function voiceBandForGate(samples, sampleRate) {
+  let buf = processBiquad(samples, biquadCoeffs('highpass', VOICE_HP_HZ, 0, 0.707, sampleRate));
+  buf = processBiquad(buf, biquadCoeffs('lowpass', VOICE_LP_HZ, 0, 0.707, sampleRate));
+  return buf;
+}
+
+/** 平滑门控：人声带能量 + attack/release 指数平滑 */
+function processOfflineImproved(inputSamples, sampleRate = SR) {
+  const threshold = THRESHOLD_BASE + NOISE_GATE * THRESHOLD_SCALE;
+  const attackFrames = Math.max(1, (GATE_ATTACK_MS / 1000) * sampleRate / GATE_FRAME_LEN);
+  const releaseFrames = Math.max(1, (GATE_RELEASE_MS / 1000) * sampleRate / GATE_FRAME_LEN);
+
+  const voiceBand = voiceBandForGate(inputSamples, sampleRate);
+  const eqSamples = applyEq(inputSamples, sampleRate);
+
+  const numFrames = Math.ceil(inputSamples.length / GATE_FRAME_LEN);
+  const frameRms = new Float32Array(numFrames);
+  for (let f = 0; f < numFrames; f++) {
+    frameRms[f] = rms(voiceBand, f * GATE_FRAME_LEN, GATE_FRAME_LEN);
+  }
+
+  let gain = 0;
+  const frameGain = new Float32Array(numFrames);
+  for (let f = 0; f < numFrames; f++) {
+    const target = frameRms[f] > threshold ? MAIN_GAIN_LINEAR : 0;
+    const tc = target > gain ? attackFrames : releaseFrames;
+    const alpha = 1 - Math.exp(-1 / Math.max(1, tc));
+    gain = gain + alpha * (target - gain);
+    frameGain[f] = gain;
+  }
+
+  const out = new Float32Array(inputSamples.length);
+  for (let i = 0; i < inputSamples.length; i++) {
+    const f = Math.min(Math.floor(i / GATE_FRAME_LEN), numFrames - 1);
+    out[i] = eqSamples[i] * frameGain[f];
+  }
+  return out;
+}
+
+/** 兼容旧版：简单门控（保留供对比） */
+function processOfflineGateGain(inputSamples) {
+  const threshold = THRESHOLD_BASE + NOISE_GATE * THRESHOLD_SCALE;
+  const out = new Float32Array(inputSamples.length);
+  for (let i = 0; i < inputSamples.length; i += GATE_FRAME_LEN) {
+    const frameRms = rms(inputSamples, i, GATE_FRAME_LEN);
+    const g = frameRms > threshold ? MAIN_GAIN_LINEAR : 0;
+    for (let j = 0; j < GATE_FRAME_LEN && i + j < inputSamples.length; j++) {
+      out[i + j] = inputSamples[i + j] * g;
+    }
+  }
+  return out;
+}
+
+/** 与参考的相关系数（-1..1），越高越接近参考 */
+function correlation(a, b) {
+  const len = Math.min(a.length, b.length);
+  if (len === 0) return 0;
+  let sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
+  for (let i = 0; i < len; i++) {
+    sumA += a[i]; sumB += b[i];
+    sumAB += a[i] * b[i];
+    sumA2 += a[i] * a[i]; sumB2 += b[i] * b[i];
+  }
+  const n = len;
+  const num = n * sumAB - sumA * sumB;
+  const den = Math.sqrt((n * sumA2 - sumA * sumA) * (n * sumB2 - sumB * sumB));
+  return den === 0 ? 0 : num / den;
+}
+
+/** 分段 SNR（dB）：signal 为算法输出，reference 为 clean */
+function segmentalSnrDb(signal, reference, segmentLen = 1024) {
+  const len = Math.min(signal.length, reference.length);
+  let sumSnr = 0;
+  let count = 0;
+  for (let i = 0; i + segmentLen <= len; i += segmentLen) {
+    let sigPower = 0, refPower = 0;
+    for (let j = 0; j < segmentLen; j++) {
+      sigPower += signal[i + j] * signal[i + j];
+      refPower += reference[i + j] * reference[i + j];
+    }
+    if (refPower > 1e-12) {
+      const snr = 10 * Math.log10((sigPower + 1e-12) / (refPower + 1e-12));
+      sumSnr += snr;
+      count++;
+    }
+  }
+  return count === 0 ? 0 : sumSnr / count;
+}
+
+function main() {
+  const manifestPath = path.join(REGRESSION_DIR, 'manifest.json');
+  if (!fs.existsSync(manifestPath)) {
+    console.error('manifest.json 不存在:', manifestPath);
+    process.exit(1);
+  }
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+  if (!fs.existsSync(SAMPLES_DIR)) {
+    fs.mkdirSync(SAMPLES_DIR, { recursive: true });
+    fs.mkdirSync(path.join(SAMPLES_DIR, 'noisy'), { recursive: true });
+    fs.mkdirSync(path.join(SAMPLES_DIR, 'clean'), { recursive: true });
+  }
+  if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
+
+  const results = [];
+  let skipped = 0;
+  for (const entry of manifest) {
+    const noisyPath = path.join(SAMPLES_DIR, entry.noisy);
+    const cleanPath = path.join(SAMPLES_DIR, entry.clean);
+    if (!fs.existsSync(noisyPath) || !fs.existsSync(cleanPath)) {
+      results.push({ id: entry.id, status: 'skipped', reason: 'missing_file' });
+      skipped++;
+      continue;
+    }
+    try {
+      const { samples: noisy, sampleRate } = loadWav(noisyPath);
+      const { samples: clean } = loadWav(cleanPath);
+      const processed = processOfflineImproved(noisy, sampleRate);
+      const corrInput = correlation(noisy, clean);
+      const corrOutput = correlation(processed, clean);
+      const snrInput = segmentalSnrDb(noisy, clean);
+      const snrOutput = segmentalSnrDb(processed, clean);
+      results.push({
+        id: entry.id,
+        status: 'ok',
+        scene: entry.scene,
+        correlation_input: Math.round(corrInput * 1e4) / 1e4,
+        correlation_output: Math.round(corrOutput * 1e4) / 1e4,
+        seg_snr_input_db: Math.round(snrInput * 100) / 100,
+        seg_snr_output_db: Math.round(snrOutput * 100) / 100,
+        snr_improvement_db: Math.round((snrOutput - snrInput) * 100) / 100,
+      });
+    } catch (e) {
+      results.push({ id: entry.id, status: 'error', reason: e.message });
+      skipped++;
+    }
+  }
+
+  const okResults = results.filter(r => r.status === 'ok');
+  const avgCorrOut = okResults.length ? okResults.reduce((s, r) => s + r.correlation_output, 0) / okResults.length : 0;
+  const avgSnrImprove = okResults.length ? okResults.reduce((s, r) => s + r.snr_improvement_db, 0) / okResults.length : 0;
+
+  const report = {
+    timestamp: new Date().toISOString(),
+    manifest_total: manifest.length,
+    run_total: results.length,
+    skipped,
+    passed: okResults.length,
+    summary: {
+      avg_correlation_output: Math.round(avgCorrOut * 1e4) / 1e4,
+      avg_snr_improvement_db: Math.round(avgSnrImprove * 100) / 100,
+    },
+    results,
+  };
+
+  const reportName = `report-${report.timestamp.replace(/[:.]/g, '-').slice(0, 19)}.json`;
+  const reportPath = path.join(REPORTS_DIR, reportName);
+  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
+
+  console.log('[audio-regression] total:', manifest.length, '| ran:', okResults.length, '| skipped:', skipped);
+  console.log('[audio-regression] avg_correlation_output:', report.summary.avg_correlation_output);
+  console.log('[audio-regression] avg_snr_improvement_db:', report.summary.avg_snr_improvement_db);
+  console.log('[audio-regression] report:', reportPath);
+}
+
+main();

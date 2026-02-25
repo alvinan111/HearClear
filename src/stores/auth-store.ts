@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import type { UserProfile, AuthState } from '@types/auth';
+import type { UserProfile, AuthState, LoginMethod } from '@types/auth';
 import * as authService from '@services/auth';
 
 interface AuthStore extends AuthState {
-  login: (phone: string, code: string) => Promise<{ error: string | null }>;
+  login: (identifier: string, code: string, method: LoginMethod) => Promise<{ error: string | null }>;
+  loginWithGoogle: () => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
   loadCurrentUser: () => Promise<void>;
   updateProfile: (profile: Partial<UserProfile>) => void;
@@ -25,14 +26,28 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  login: async (phone, code) => {
+  login: async (identifier, code, method) => {
     set({ isLoading: true, error: null });
-    const { user, error } = await authService.verifyOtp(phone, code);
+    const { user, error } =
+      method === 'phone'
+        ? await authService.verifyOtp(identifier, code)
+        : await authService.verifyOtpEmail(identifier, code);
     if (error) {
       set({ isLoading: false, error });
       return { error };
     }
     set({ user, isAuthenticated: true, isLoading: false, error: null });
+    return { error: null };
+  },
+
+  loginWithGoogle: async () => {
+    set({ isLoading: true, error: null });
+    const { user, error } = await authService.signInWithGoogle();
+    if (error) {
+      set({ isLoading: false, error });
+      return { error };
+    }
+    set({ user: user ?? null, isAuthenticated: !!user, isLoading: false, error: null });
     return { error: null };
   },
 

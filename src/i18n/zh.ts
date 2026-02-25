@@ -62,6 +62,7 @@ const zh = {
       sceneDefault: '默认',
       sceneTv: 'TV 拾音',
       sceneHint: 'TV 拾音：手机放电视旁，较长 release、稍低阈值。切换后需重新开启助听生效。',
+      latencyTest: '延迟测试',
     },
     membership: {
       title: '我的会员',
@@ -105,7 +106,12 @@ const zh = {
   auth: {
     title: '登录',
     subtitle: '登录后享受完整功能',
+    loginWithPhone: '手机号',
+    loginWithEmail: '邮箱',
+    loginWithGoogle: '使用 Google 登录',
+    orDivider: '或',
     phonePlaceholder: '请输入手机号',
+    emailPlaceholder: '请输入邮箱',
     codePlaceholder: '请输入验证码',
     sendCode: '发送验证码',
     resendCode: '重新发送',
@@ -117,9 +123,11 @@ const zh = {
     privacy: '《隐私政策》',
     errors: {
       invalidPhone: '请输入正确的手机号',
+      invalidEmail: '请输入正确的邮箱',
       invalidCode: '请输入6位验证码',
       sendFailed: '验证码发送失败，请重试',
       loginFailed: '登录失败，请检查验证码',
+      googleFailed: 'Google 登录失败，请重试',
     },
   },
 

@@ -14,7 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { sendOtp } from '@services/auth';
+import type { LoginMethod } from '@types/auth';
+import { sendOtp, sendOtpEmail } from '@services/auth';
 import { useAuthStore } from '@stores/auth-store';
 import {
   COLORS, FONT_SIZE, FONT_WEIGHT, SPACING,
@@ -22,14 +23,22 @@ import {
 } from '@constants/theme';
 
 const CODE_COOLDOWN = 60; // 秒
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(s: string): boolean {
+  return EMAIL_REGEX.test(s.trim());
+}
 
 export default function LoginScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const isLoading = useAuthStore((s) => s.isLoading);
 
+  const [method, setMethod] = useState<LoginMethod>('phone');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [cooldown, setCooldown] = useState(0);
   const [isSending, setIsSending] = useState(false);
@@ -55,31 +64,54 @@ export default function LoginScreen() {
   }
 
   async function handleSendCode() {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length !== 11) {
-      Alert.alert('', t('auth.errors.invalidPhone'));
-      return;
-    }
-    setIsSending(true);
-    const { error } = await sendOtp(phone);
-    setIsSending(false);
-    if (error) {
-      Alert.alert('', t('auth.errors.sendFailed'));
+    if (method === 'phone') {
+      const cleaned = phone.replace(/\D/g, '');
+      if (cleaned.length !== 11) {
+        Alert.alert('', t('auth.errors.invalidPhone'));
+        return;
+      }
+      setIsSending(true);
+      const { error } = await sendOtp(phone);
+      setIsSending(false);
+      if (error) {
+        Alert.alert('', t('auth.errors.sendFailed'));
+      } else {
+        startCooldown();
+      }
     } else {
-      startCooldown();
+      if (!isValidEmail(email)) {
+        Alert.alert('', t('auth.errors.invalidEmail'));
+        return;
+      }
+      setIsSending(true);
+      const { error } = await sendOtpEmail(email);
+      setIsSending(false);
+      if (error) {
+        Alert.alert('', t('auth.errors.sendFailed'));
+      } else {
+        startCooldown();
+      }
     }
   }
 
   async function handleLogin() {
-    if (phone.replace(/\D/g, '').length !== 11) {
-      Alert.alert('', t('auth.errors.invalidPhone'));
-      return;
+    const identifier = method === 'phone' ? phone : email;
+    if (method === 'phone') {
+      if (phone.replace(/\D/g, '').length !== 11) {
+        Alert.alert('', t('auth.errors.invalidPhone'));
+        return;
+      }
+    } else {
+      if (!isValidEmail(email)) {
+        Alert.alert('', t('auth.errors.invalidEmail'));
+        return;
+      }
     }
     if (code.length !== 6) {
       Alert.alert('', t('auth.errors.invalidCode'));
       return;
     }
-    const { error } = await login(phone, code);
+    const { error } = await login(identifier, code, method);
     if (error) {
       Alert.alert('', t('auth.errors.loginFailed'));
     } else {
@@ -87,7 +119,18 @@ export default function LoginScreen() {
     }
   }
 
-  const canSend = cooldown === 0 && !isSending && phone.replace(/\D/g, '').length === 11;
+  async function handleGoogleLogin() {
+    const { error } = await loginWithGoogle();
+    if (error) {
+      Alert.alert('', t('auth.errors.googleFailed'));
+    } else {
+      router.back();
+    }
+  }
+
+  const canSendPhone = cooldown === 0 && !isSending && phone.replace(/\D/g, '').length === 11;
+  const canSendEmail = cooldown === 0 && !isSending && isValidEmail(email);
+  const canSend = method === 'phone' ? canSendPhone : canSendEmail;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -100,22 +143,60 @@ export default function LoginScreen() {
           <Text style={styles.title}>{t('auth.title')}</Text>
           <Text style={styles.subtitle}>{t('auth.subtitle')}</Text>
 
-          {/* 手机号输入 */}
-          <View style={styles.inputGroup}>
-            <View style={styles.prefixArea}>
-              <Text style={styles.prefix}>+86</Text>
-            </View>
-            <TextInput
-              style={styles.input}
-              value={phone}
-              onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 11))}
-              placeholder={t('auth.phonePlaceholder')}
-              placeholderTextColor={COLORS.textDisabled}
-              keyboardType="phone-pad"
-              maxLength={11}
-              returnKeyType="next"
-            />
+          {/* 手机 / 邮箱切换 */}
+          <View style={styles.methodRow}>
+            <TouchableOpacity
+              style={[styles.methodTab, method === 'phone' && styles.methodTabActive]}
+              onPress={() => setMethod('phone')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.methodTabText, method === 'phone' && styles.methodTabTextActive]}>
+                {t('auth.loginWithPhone')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.methodTab, method === 'email' && styles.methodTabActive]}
+              onPress={() => setMethod('email')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.methodTabText, method === 'email' && styles.methodTabTextActive]}>
+                {t('auth.loginWithEmail')}
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          {/* 手机号或邮箱输入 */}
+          {method === 'phone' ? (
+            <View style={styles.inputGroup}>
+              <View style={styles.prefixArea}>
+                <Text style={styles.prefix}>+86</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 11))}
+                placeholder={t('auth.phonePlaceholder')}
+                placeholderTextColor={COLORS.textDisabled}
+                keyboardType="phone-pad"
+                maxLength={11}
+                returnKeyType="next"
+              />
+            </View>
+          ) : (
+            <View style={styles.inputGroup}>
+              <TextInput
+                style={[styles.input, { paddingLeft: SPACING.md }]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder={t('auth.emailPlaceholder')}
+                placeholderTextColor={COLORS.textDisabled}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+              />
+            </View>
+          )}
 
           {/* 验证码输入 */}
           <View style={styles.codeRow}>
@@ -160,6 +241,21 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
+          {/* 或 / Google 登录 */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{t('auth.orDivider')}</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleLogin}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.googleButtonText}>{t('auth.loginWithGoogle')}</Text>
+          </TouchableOpacity>
+
           {/* 协议说明 */}
           <View style={styles.agreementRow}>
             <Text style={styles.agreementText}>{t('auth.agreePrefix')} </Text>
@@ -196,6 +292,32 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.lg,
     color: COLORS.textSecondary,
     marginBottom: SPACING.xxl,
+  },
+  methodRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  methodTab: {
+    flex: 1,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  methodTabActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}18`,
+  },
+  methodTabText: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.medium,
+    color: COLORS.textSecondary,
+  },
+  methodTabTextActive: {
+    color: COLORS.primary,
   },
   inputGroup: {
     flexDirection: 'row',
@@ -273,6 +395,36 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xl,
     fontWeight: FONT_WEIGHT.bold,
     color: COLORS.textInverse,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+    gap: SPACING.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+  },
+  googleButton: {
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    height: TOUCH_TARGET.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.xl,
+    backgroundColor: COLORS.surface,
+  },
+  googleButtonText: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
   },
   agreementRow: {
     flexDirection: 'row',

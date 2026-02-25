@@ -1,0 +1,513 @@
+{
+  "timestamp": "2026-02-25T02:06:20.440Z",
+  "manifest_total": 100,
+  "run_total": 100,
+  "skipped": 100,
+  "passed": 0,
+  "summary": {
+    "avg_correlation_output": 0,
+    "avg_snr_improvement_db": 0
+  },
+  "results": [
+    {
+      "id": "001",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "002",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "003",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "004",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "005",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "006",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "007",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "008",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "009",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "010",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "011",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "012",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "013",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "014",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "015",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "016",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "017",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "018",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "019",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "020",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "021",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "022",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "023",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "024",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "025",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "026",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "027",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "028",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "029",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "030",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "031",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "032",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "033",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "034",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "035",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "036",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "037",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "038",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "039",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "040",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "041",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "042",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "043",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "044",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "045",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "046",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "047",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "048",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "049",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "050",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "051",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "052",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "053",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "054",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "055",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "056",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "057",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "058",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "059",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "060",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "061",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "062",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "063",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "064",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "065",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "066",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "067",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "068",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "069",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "070",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "071",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "072",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "073",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "074",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "075",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "076",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "077",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "078",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "079",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "080",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "081",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "082",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "083",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "084",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "085",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "086",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "087",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "088",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "089",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "090",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "091",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "092",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "093",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "094",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "095",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "096",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "097",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "098",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "099",
+      "status": "skipped",
+      "reason": "missing_file"
+    },
+    {
+      "id": "100",
+      "status": "skipped",
+      "reason": "missing_file"
+    }
+  ]
+}

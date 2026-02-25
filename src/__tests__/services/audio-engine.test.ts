@@ -23,7 +23,7 @@ jest.mock('@stores/audio-store', () => ({
   },
 }));
 
-import { AudioEngine } from '@services/audio/AudioEngine';
+import { AudioEngine, GATE_ANALYSER_FFT } from '@services/audio/AudioEngine';
 
 describe('AudioEngine - Expo Go / Mock 模式', () => {
   it('isAvailable 为 false（无 native 模块）', () => {
@@ -88,5 +88,9 @@ describe('AudioEngine - Expo Go / Mock 模式', () => {
     });
     await AudioEngine.stop();
     expect(mockSetFeedbackFrequency).toHaveBeenCalledWith(null);
+  });
+
+  it('门控分析使用 512 点 FFT（低延迟，见 native-audio-architecture.md）', () => {
+    expect(GATE_ANALYSER_FFT).toBe(512);
   });
 });
