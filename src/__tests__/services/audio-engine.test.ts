@@ -93,4 +93,15 @@ describe('AudioEngine - Expo Go / Mock 模式', () => {
   it('门控分析使用 512 点 FFT（低延迟，见 native-audio-architecture.md）', () => {
     expect(GATE_ANALYSER_FFT).toBe(512);
   });
+
+  it('start() 传入 neuralDenoiser: true 在 mock 下不报错', async () => {
+    const result = await AudioEngine.start({
+      gain: 6,
+      voiceEnhance: 0.5,
+      noiseGate: 0.2,
+      headphoneMode: 'normal' as never,
+      neuralDenoiser: true,
+    });
+    expect(result.error).toBeNull();
+  });
 });

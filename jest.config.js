@@ -53,6 +53,7 @@ module.exports = {
     '^react-native-device-info$':   '<rootDir>/src/__mocks__/empty.ts',
     '^react-native-wechat-lib$':    '<rootDir>/src/__mocks__/empty.ts',
     '^react-native-audio-api$':     '<rootDir>/src/__mocks__/empty.ts',
+    '^react-native-speech-enhancement$': '<rootDir>/src/__mocks__/empty.ts',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   collectCoverageFrom: [

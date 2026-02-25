@@ -54,6 +54,7 @@ yarn-error.log*
 
 # Testing
 coverage/
+test-results/
 
 # Android signing
 *.keystore

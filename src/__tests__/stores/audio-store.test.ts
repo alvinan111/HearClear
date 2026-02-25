@@ -10,6 +10,7 @@ beforeEach(() => {
       noiseGate: AUDIO_CONFIG.DEFAULT_NOISE_GATE,
       headphoneMode: HeadphoneMode.NORMAL,
       scene: 'default',
+      neuralDenoiser: false,
     },
     status: 'idle',
     headphoneConnected: false,
@@ -26,6 +27,7 @@ describe('初始状态', () => {
     expect(params.voiceEnhance).toBe(AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE);
     expect(params.noiseGate).toBe(AUDIO_CONFIG.DEFAULT_NOISE_GATE);
     expect(params.headphoneMode).toBe(HeadphoneMode.NORMAL);
+    expect(params.neuralDenoiser).toBe(false);
   });
 
   it('初始 status 为 idle', () => {
@@ -107,11 +109,24 @@ describe('updateParams', () => {
     expect(useAudioStore.getState().params.gain).toBe(AUDIO_CONFIG.DEFAULT_GAIN);
   });
 
+  it('configLocked 时禁止修改 neuralDenoiser', () => {
+    useAudioStore.getState().setConfigLocked(true);
+    useAudioStore.getState().updateParams({ neuralDenoiser: true });
+    expect(useAudioStore.getState().params.neuralDenoiser).toBe(false);
+  });
+
   it('可单独更新 noiseGate、voiceEnhance', () => {
     useAudioStore.getState().updateParams({ noiseGate: 0.5 });
     expect(useAudioStore.getState().params.noiseGate).toBe(0.5);
     useAudioStore.getState().updateParams({ voiceEnhance: 0.8 });
     expect(useAudioStore.getState().params.voiceEnhance).toBe(0.8);
+  });
+
+  it('可单独更新 neuralDenoiser', () => {
+    useAudioStore.getState().updateParams({ neuralDenoiser: true });
+    expect(useAudioStore.getState().params.neuralDenoiser).toBe(true);
+    useAudioStore.getState().updateParams({ neuralDenoiser: false });
+    expect(useAudioStore.getState().params.neuralDenoiser).toBe(false);
   });
 
   it('updateParams 多次合并保留最后一次', () => {
@@ -128,6 +143,12 @@ describe('resetParams', () => {
     const { params } = useAudioStore.getState();
     expect(params.gain).toBe(AUDIO_CONFIG.DEFAULT_GAIN);
     expect(params.voiceEnhance).toBe(AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE);
+  });
+
+  it('resetParams 将 neuralDenoiser 恢复为 false', () => {
+    useAudioStore.getState().updateParams({ neuralDenoiser: true });
+    useAudioStore.getState().resetParams();
+    expect(useAudioStore.getState().params.neuralDenoiser).toBe(false);
   });
 
   it('configLocked 时禁止重置', () => {

@@ -38,4 +38,14 @@ describe('i18n settings.audio keys', () => {
   it('英文：settings.audio.latencyTest', () => {
     expect(en.settings?.audio?.latencyTest).toBe('Latency test');
   });
+
+  it('中文：settings.audio.neuralDenoiser / neuralDenoiserHint', () => {
+    expect(zh.settings?.audio?.neuralDenoiser).toBe('神经降噪');
+    expect(zh.settings?.audio?.neuralDenoiserHint).toContain('RNNoise');
+  });
+
+  it('英文：settings.audio.neuralDenoiser / neuralDenoiserHint', () => {
+    expect(en.settings?.audio?.neuralDenoiser).toBe('Neural denoiser');
+    expect(en.settings?.audio?.neuralDenoiserHint).toContain('native');
+  });
 });

@@ -9,6 +9,7 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:report": "node -e \"require('fs').mkdirSync('test-results',{recursive:true})\" && jest --json --outputFile=test-results/results.json",
     "test:coverage": "jest --coverage",
     "test:db": "SUPABASE_PROJECT_ID=reiirfhljlepxiibojzh SUPABASE_ACCESS_TOKEN=sbp_9cd410f8f10666b73c0157f42448f8df9e9550f4 jest --testPathPattern=db",
     "test:audio-regression": "node scripts/audio-regression/run.mjs",
