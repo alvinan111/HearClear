@@ -14,6 +14,8 @@ export interface AudioParams {
   headphoneMode: HeadphoneMode;
   /** 场景预设：TV 拾音时用较长 release、稍低阈值 */
   scene?: AudioScene;
+  /** 神经降噪（RNNoise/GTCRN）：实时麦克风增强，需原生模块支持，默认关闭 */
+  neuralDenoiser?: boolean;
 }
 
 export interface AudioEngineState {

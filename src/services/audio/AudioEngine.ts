@@ -34,6 +34,29 @@ try {
   isNativeAvailable = false;
 }
 
+/** 神经降噪：优先 react-native-speech-enhancement，否则用 patched AudioAPIModule（见 docs/neural-denoiser-integration.md） */
+function getSpeechEnhancementModule(): { setEnabled?: (enabled: boolean) => void } | null {
+  try {
+    const se = require('react-native-speech-enhancement');
+    if (se?.setEnabled && se?.isAvailable?.()) return { setEnabled: se.setEnabled };
+    const { NativeModules } = require('react-native');
+    const audio = NativeModules?.AudioAPIModule;
+    if (typeof audio?.setSpeechEnhancementEnabled === 'function') {
+      return { setEnabled: (e: boolean) => audio.setSpeechEnhancementEnabled(e) };
+    }
+    return null;
+  } catch {
+    try {
+      const { NativeModules } = require('react-native');
+      const audio = NativeModules?.AudioAPIModule;
+      if (typeof audio?.setSpeechEnhancementEnabled === 'function') {
+        return { setEnabled: (e: boolean) => audio.setSpeechEnhancementEnabled(e) };
+      }
+    } catch { /* no-op */ }
+    return null;
+  }
+}
+
 // ─── 节点类型别名 ─────────────────────────────────────────────────────────────
 type Ctx = import('react-native-audio-api').AudioContext;
 type GainNode = import('react-native-audio-api').GainNode;
@@ -170,6 +193,15 @@ export const AudioEngine = {
       const ctx = new AudioContextClass!();
       state.ctx = ctx;
       const sr = ctx.sampleRate;
+
+      // ── 神经降噪：若存在则通知启用/关闭，并确保原生处理器已注册（见 docs/neural-denoiser-integration.md）────
+      const speechEnhancement = getSpeechEnhancementModule();
+      if (speechEnhancement?.setEnabled) {
+        try {
+          require('react-native-speech-enhancement')?.ensureNativeInit?.();
+        } catch { /* optional */ }
+        speechEnhancement.setEnabled(!!params.neuralDenoiser);
+      }
 
       // ── 创建麦克风输入节点（正确方式：RecorderAdapterNode）────────────────
       const adapterNode: RecorderAdapterNode = ctx.createRecorderAdapter();
@@ -362,6 +394,9 @@ export const AudioEngine = {
 
   // ── 停止 ──────────────────────────────────────────────────────────────────
   async stop(): Promise<void> {
+    const speechEnhancement = getSpeechEnhancementModule();
+    if (speechEnhancement?.setEnabled) speechEnhancement.setEnabled(false);
+
     if (state.gateInterval) {
       clearInterval(state.gateInterval);
       state.gateInterval = null;

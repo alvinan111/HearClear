@@ -186,6 +186,21 @@ export default function SettingsScreen() {
           <Text style={[styles.audioParamHint, { marginTop: -4, marginBottom: 8 }]}>
             {t('settings.audio.sceneHint')}
           </Text>
+          <View style={[styles.audioParamRow, { marginBottom: 4 }]}>
+            <Text style={styles.audioParamLabel}>🧠 {t('settings.audio.neuralDenoiser')}</Text>
+            <TouchableOpacity
+              disabled={configLocked}
+              onPress={() => updateParams({ neuralDenoiser: !(params.neuralDenoiser ?? false) })}
+              style={[styles.feedbackTypeBtn, (params.neuralDenoiser ?? false) && styles.feedbackTypeBtnSelected]}
+            >
+              <Text style={[styles.feedbackTypeBtnText, (params.neuralDenoiser ?? false) && { color: COLORS.primary }]}>
+                {(params.neuralDenoiser ?? false) ? t('common.on') : t('common.off')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.audioParamHint, { marginTop: -4, marginBottom: 8 }]}>
+            {t('settings.audio.neuralDenoiserHint')}
+          </Text>
           <TouchableOpacity style={styles.resetBtn} onPress={handleResetParams}>
             <Text style={styles.resetBtnText}>🔄 {t('settings.audio.resetDefaults')}</Text>
           </TouchableOpacity>

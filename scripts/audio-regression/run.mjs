@@ -18,6 +18,18 @@ const ROOT = path.resolve(__dirname, '../..');
 const REGRESSION_DIR = path.join(ROOT, 'test-data', 'audio-regression');
 const SAMPLES_DIR = path.join(REGRESSION_DIR, 'samples');
 const REPORTS_DIR = path.join(REGRESSION_DIR, 'reports');
+const RNNOISE_SR = 48000;
+
+/** 可选 RNNoise：需安装 rnnoise-nodejs 且 USE_RNNOISE=1 时启用；suppress 使用 16bit 48kHz 单声道 RAW */
+function getRnnoiseSuppress() {
+  if (process.env.USE_RNNOISE !== '1') return null;
+  try {
+    const rnnoise = require('rnnoise-nodejs');
+    return typeof rnnoise?.suppress === 'function' ? rnnoise.suppress.bind(rnnoise) : null;
+  } catch {
+    return null;
+  }
+}
 
 // 与 AUDIO_CONFIG 对齐（离线回归用）
 const SR = 44100;
@@ -51,6 +63,55 @@ function loadWav(filePath) {
   const ch = Array.isArray(samples) ? samples[0] : samples;
   const sampleRate = wav.fmt.sampleRate || SR;
   return { samples: Float32Array.from(ch), sampleRate };
+}
+
+/** 简单线性重采样 */
+function resample(samples, fromSr, toSr) {
+  if (fromSr === toSr) return samples;
+  const outLen = Math.round(samples.length * toSr / fromSr);
+  const out = new Float32Array(outLen);
+  for (let i = 0; i < outLen; i++) {
+    const srcIdx = (i * fromSr) / toSr;
+    const j = Math.floor(srcIdx);
+    const frac = srcIdx - j;
+    out[i] = (samples[j] ?? 0) * (1 - frac) + (samples[j + 1] ?? 0) * frac;
+  }
+  return out;
+}
+
+/** 可选 RNNoise 离线：48k 16bit RAW → suppress → 再重采样回原 SR；无 rnnoise-nodejs 时返回 null */
+function applyRNNoiseOffline(samples, sampleRate) {
+  const suppress = getRnnoiseSuppress();
+  if (!suppress) return null;
+  const os = require('os');
+  const tmpDir = os.tmpdir();
+  const id = `rnnoise_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const rawIn = path.join(tmpDir, `${id}.raw`);
+  const rawOut = path.join(tmpDir, `${id}_out.raw`);
+  try {
+    const at48k = resample(samples, sampleRate, RNNOISE_SR);
+    const buf16 = Buffer.alloc(at48k.length * 2);
+    for (let i = 0; i < at48k.length; i++) {
+      const s = Math.max(-1, Math.min(1, at48k[i]));
+      buf16.writeInt16LE(s < 0 ? s * 0x8000 : s * 0x7FFF, i * 2);
+    }
+    fs.writeFileSync(rawIn, buf16);
+    suppress(rawIn, rawOut);
+    const outBuf = fs.readFileSync(rawOut);
+    const outLen = Math.floor(outBuf.length / 2);
+    const out48k = new Float32Array(outLen);
+    for (let i = 0; i < outLen; i++) {
+      out48k[i] = outBuf.readInt16LE(i * 2) / 0x8000;
+    }
+    const back = resample(out48k, RNNOISE_SR, sampleRate);
+    return back.length <= samples.length ? back : back.subarray(0, samples.length);
+  } catch (e) {
+    console.warn('[audio-regression] RNNoise failed:', e.message);
+    return null;
+  } finally {
+    try { fs.unlinkSync(rawIn); } catch { }
+    try { fs.unlinkSync(rawOut); } catch { }
+  }
 }
 
 function rms(samples, start, length) {
@@ -257,7 +318,7 @@ function main() {
       const corrOutput = correlation(processed, clean);
       const snrInput = segmentalSnrDb(noisy, clean);
       const snrOutput = segmentalSnrDb(processed, clean);
-      results.push({
+      const row = {
         id: entry.id,
         status: 'ok',
         scene: entry.scene,
@@ -266,7 +327,14 @@ function main() {
         seg_snr_input_db: Math.round(snrInput * 100) / 100,
         seg_snr_output_db: Math.round(snrOutput * 100) / 100,
         snr_improvement_db: Math.round((snrOutput - snrInput) * 100) / 100,
-      });
+      };
+      const rnnoiseFirst = applyRNNoiseOffline(noisy, sampleRate);
+      if (rnnoiseFirst) {
+        const processedRnnoise = processOfflineImproved(rnnoiseFirst, sampleRate);
+        row.correlation_output_rnnoise = Math.round(correlation(processedRnnoise, clean) * 1e4) / 1e4;
+        row.snr_improvement_db_rnnoise = Math.round((segmentalSnrDb(processedRnnoise, clean) - snrInput) * 100) / 100;
+      }
+      results.push(row);
     } catch (e) {
       results.push({ id: entry.id, status: 'error', reason: e.message });
       skipped++;
@@ -276,6 +344,11 @@ function main() {
   const okResults = results.filter(r => r.status === 'ok');
   const avgCorrOut = okResults.length ? okResults.reduce((s, r) => s + r.correlation_output, 0) / okResults.length : 0;
   const avgSnrImprove = okResults.length ? okResults.reduce((s, r) => s + r.snr_improvement_db, 0) / okResults.length : 0;
+  const rnnoiseResults = okResults.filter(r => r.correlation_output_rnnoise != null);
+  const avgCorrOutRnnoise = rnnoiseResults.length
+    ? rnnoiseResults.reduce((s, r) => s + r.correlation_output_rnnoise, 0) / rnnoiseResults.length : null;
+  const avgSnrImproveRnnoise = rnnoiseResults.length
+    ? rnnoiseResults.reduce((s, r) => s + r.snr_improvement_db_rnnoise, 0) / rnnoiseResults.length : null;
 
   const report = {
     timestamp: new Date().toISOString(),
@@ -286,6 +359,10 @@ function main() {
     summary: {
       avg_correlation_output: Math.round(avgCorrOut * 1e4) / 1e4,
       avg_snr_improvement_db: Math.round(avgSnrImprove * 100) / 100,
+      ...(avgCorrOutRnnoise != null && {
+        avg_correlation_output_rnnoise: Math.round(avgCorrOutRnnoise * 1e4) / 1e4,
+        avg_snr_improvement_db_rnnoise: Math.round(avgSnrImproveRnnoise * 100) / 100,
+      }),
     },
     results,
   };
@@ -297,6 +374,10 @@ function main() {
   console.log('[audio-regression] total:', manifest.length, '| ran:', okResults.length, '| skipped:', skipped);
   console.log('[audio-regression] avg_correlation_output:', report.summary.avg_correlation_output);
   console.log('[audio-regression] avg_snr_improvement_db:', report.summary.avg_snr_improvement_db);
+  if (report.summary.avg_correlation_output_rnnoise != null) {
+    console.log('[audio-regression] avg_correlation_output_rnnoise:', report.summary.avg_correlation_output_rnnoise);
+    console.log('[audio-regression] avg_snr_improvement_db_rnnoise:', report.summary.avg_snr_improvement_db_rnnoise);
+  }
   console.log('[audio-regression] report:', reportPath);
 }
 

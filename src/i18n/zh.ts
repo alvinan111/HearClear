@@ -62,6 +62,8 @@ const zh = {
       sceneDefault: '默认',
       sceneTv: 'TV 拾音',
       sceneHint: 'TV 拾音：手机放电视旁，较长 release、稍低阈值。切换后需重新开启助听生效。',
+      neuralDenoiser: '神经降噪',
+      neuralDenoiserHint: 'RNNoise/GTCRN 实时降噪（实验），需原生支持。',
       latencyTest: '延迟测试',
     },
     membership: {

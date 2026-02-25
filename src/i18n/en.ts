@@ -60,6 +60,8 @@ const en: TranslationKeys = {
       sceneDefault: 'Default',
       sceneTv: 'TV Pickup',
       sceneHint: 'TV Pickup: phone near TV, longer release and lower threshold. Restart hearing after switching.',
+      neuralDenoiser: 'Neural denoiser',
+      neuralDenoiserHint: 'RNNoise/GTCRN real-time denoising (experimental); requires native support.',
       latencyTest: 'Latency test',
     },
     membership: {
