@@ -191,6 +191,34 @@ const en: TranslationKeys = {
     viewTerms: 'Terms of Use',
   },
 
+  hearingTest: {
+    title: 'Hearing Test',
+    disclaimer: 'This test is for reference only, not a clinical diagnosis. Consult a professional for hearing concerns.',
+    headphoneNotice: 'Please wear headphones and test in a quiet environment.',
+    startTest: 'Start Test',
+    skip: 'Skip',
+    frequency: '{{freq}} Hz',
+    heard: 'Heard',
+    notHeard: 'Not heard',
+    playing: 'Playing...',
+    replay: 'Replay',
+    nextFrequency: 'Next frequency',
+    finish: 'Finish',
+    resultPreview: 'Results will be used for personalized amplification. You can retest in Settings anytime.',
+    notAvailable: 'Hearing test not available in this environment (requires native audio).',
+  },
+
+  feedbackCorrection: {
+    title: 'Volume feedback',
+    tooLoud: 'Too loud',
+    tooQuiet: 'Too quiet',
+    justRight: 'Just right',
+    advanced: 'Advanced',
+    low: 'Low',
+    mid: 'Mid',
+    high: 'High',
+  },
+
   common: {
     confirm: 'Confirm',
     cancel: 'Cancel',

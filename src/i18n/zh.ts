@@ -197,6 +197,36 @@ const zh = {
     viewTerms: '查看用户协议',
   },
 
+  // 听力测试
+  hearingTest: {
+    title: '听力测试',
+    disclaimer: '本测试仅供辅助参考，非临床诊断。如有听力问题请咨询专业机构。',
+    headphoneNotice: '请佩戴耳机并在安静环境下进行测试。',
+    startTest: '开始测试',
+    skip: '跳过',
+    frequency: '{{freq}} Hz',
+    heard: '听到了',
+    notHeard: '没听到',
+    playing: '正在播放...',
+    replay: '再次播放',
+    nextFrequency: '下一频率',
+    finish: '完成',
+    resultPreview: '测试结果将用于个性化放大，您可随时在设置中重新测试。',
+    notAvailable: '当前环境不支持听力测试（需原生音频）。',
+  },
+
+  // 反馈修正（运行中）
+  feedbackCorrection: {
+    title: '音量反馈',
+    tooLoud: '太大声',
+    tooQuiet: '太小声',
+    justRight: '刚好',
+    advanced: '高级',
+    low: '低频',
+    mid: '中频',
+    high: '高频',
+  },
+
   // 通用
   common: {
     confirm: '确认',

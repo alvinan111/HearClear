@@ -72,7 +72,7 @@ export default function DashboardPage() {
             {QUICK.map((q) => (
               <a key={q.href} href={q.href}
                 className="group flex flex-col items-center justify-center gap-3 p-5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04] transition-all cursor-pointer">
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${q.color} flex items-center justify-center text-lg shadow-lg group-hover:scale-105 transition-transform`}>{q.icon}</div>
+                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${q.color} flex items-center justify-center text-base shadow-md group-hover:scale-105 transition-transform`}>{q.icon}</div>
                 <span className="text-xs font-medium text-zinc-400 group-hover:text-zinc-200">{q.label}</span>
               </a>
             ))}

@@ -36,57 +36,62 @@ export async function initRemoteConfig(): Promise<{
 }> {
   const result = { needsForceUpdate: false, suggestUpdate: false, updateUrl: '' };
 
-  // 检查网络状态
-  const netState = await NetInfo.fetch();
-  const isOnline = netState.isConnected && netState.isInternetReachable;
+  try {
+    const netState = await NetInfo.fetch();
+    const isOnline = netState?.isConnected && netState?.isInternetReachable;
 
-  const configStore = useConfigStore.getState();
-  const authStore = useAuthStore.getState();
-  const subscriptionStore = useSubscriptionStore.getState();
+    const configStore = useConfigStore.getState();
+    const authStore = useAuthStore.getState();
+    const subscriptionStore = useSubscriptionStore.getState();
 
-  if (isOnline) {
-    // 在线：同步远程配置
-    const syncSuccess = await configStore.syncConfig();
+    if (isOnline) {
+      const syncSuccess = await configStore.syncConfig();
 
-    if (syncSuccess) {
-      // 版本检查
-      const platform = Platform.OS as 'ios' | 'android';
-      const versionInfo = await fetchAppVersion(platform);
-      if (versionInfo) {
-        const currentVersion = Application.nativeApplicationVersion ?? '1.0.0';
-        result.updateUrl = versionInfo.updateUrl;
-        result.needsForceUpdate = compareVersion(currentVersion, versionInfo.minVersion) < 0;
-        result.suggestUpdate = !result.needsForceUpdate &&
-          compareVersion(currentVersion, versionInfo.latestVersion) < 0;
+      if (syncSuccess) {
+        const platform = Platform.OS as 'ios' | 'android';
+        const versionInfo = await fetchAppVersion(platform);
+        if (versionInfo?.minVersion != null && versionInfo?.latestVersion != null) {
+          const currentVersion = Application.nativeApplicationVersion ?? '1.0.0';
+          result.updateUrl = versionInfo.updateUrl ?? '';
+          result.needsForceUpdate = compareVersion(currentVersion, versionInfo.minVersion) < 0;
+          result.suggestUpdate = !result.needsForceUpdate &&
+            compareVersion(currentVersion, versionInfo.latestVersion) < 0;
+        }
+      }
+
+      if (authStore.user) {
+        const config = configStore.getEffectiveConfig();
+        await subscriptionStore.syncSubscription(
+          authStore.user.id,
+          authStore.user,
+          config.defaultTrialDays
+        );
+      }
+    } else {
+      await configStore.syncConfig();
+      const config = configStore.getEffectiveConfig();
+
+      if (authStore.user) {
+        await subscriptionStore.loadFromCache(authStore.user, config.defaultTrialDays);
+      } else {
+        await subscriptionStore.loadFromCache(null, TRIAL_DEFAULTS.TRIAL_DAYS);
       }
     }
 
-    // 同步订阅状态
-    if (authStore.user) {
-      const config = configStore.getEffectiveConfig();
-      await subscriptionStore.syncSubscription(
-        authStore.user.id,
-        authStore.user,
-        config.defaultTrialDays
-      );
+    applyOfflineLock();
+    startNetworkListener();
+  } catch (e) {
+    if (__DEV__) {
+      console.warn('[remote-config] init failed, using offline fallback:', e);
     }
-  } else {
-    // 离线：使用本地缓存
-    await configStore.syncConfig(); // 内部会 fallback 到缓存
-    const config = configStore.getEffectiveConfig();
-
-    if (authStore.user) {
-      await subscriptionStore.loadFromCache(authStore.user, config.defaultTrialDays);
-    } else {
-      await subscriptionStore.loadFromCache(null, TRIAL_DEFAULTS.TRIAL_DAYS);
+    try {
+      await useConfigStore.getState().loadFromCache();
+      applyOfflineLock();
+    } catch {
+      // 缓存也失败时仅保证不崩，状态保持默认
     }
+    startNetworkListener();
   }
-
-  // 根据付费状态决定配置锁
-  applyOfflineLock();
-
-  // 监听网络恢复
-  startNetworkListener();
 
   return result;
 }
@@ -110,31 +115,35 @@ function startNetworkListener() {
     networkUnsubscribe();
   }
 
-  networkUnsubscribe = NetInfo.addEventListener(async (state: NetInfoState) => {
-    const isNowOnline = state.isConnected && state.isInternetReachable;
+  networkUnsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
+    const isNowOnline = state?.isConnected && state?.isInternetReachable;
     const { isOfflineMode } = useConfigStore.getState();
 
     if (isNowOnline && isOfflineMode && !syncInProgress) {
       syncInProgress = true;
-      try {
-        const configStore = useConfigStore.getState();
-        const success = await configStore.syncConfig();
+      (async () => {
+        try {
+          const configStore = useConfigStore.getState();
+          const success = await configStore.syncConfig();
 
-        if (success) {
-          const authStore = useAuthStore.getState();
-          const config = configStore.getEffectiveConfig();
-          if (authStore.user) {
-            await useSubscriptionStore.getState().syncSubscription(
-              authStore.user.id,
-              authStore.user,
-              config.defaultTrialDays
-            );
+          if (success) {
+            const authStore = useAuthStore.getState();
+            const config = configStore.getEffectiveConfig();
+            if (authStore.user) {
+              await useSubscriptionStore.getState().syncSubscription(
+                authStore.user.id,
+                authStore.user,
+                config.defaultTrialDays
+              );
+            }
+            applyOfflineLock();
           }
-          applyOfflineLock();
+        } catch (e) {
+          if (__DEV__) console.warn('[remote-config] network sync failed:', e);
+        } finally {
+          syncInProgress = false;
         }
-      } finally {
-        syncInProgress = false;
-      }
+      })();
     }
   });
 }
@@ -152,8 +161,12 @@ export function cleanupRemoteConfig() {
  * 返回 -1 (a < b), 0 (a == b), 1 (a > b)
  */
 function compareVersion(a: string, b: string): number {
-  const aParts = a.split('.').map(Number);
-  const bParts = b.split('.').map(Number);
+  const parse = (s: string) => {
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const aParts = (a || '0').split('.').map(parse);
+  const bParts = (b || '0').split('.').map(parse);
   for (let i = 0; i < 3; i++) {
     const diff = (aParts[i] ?? 0) - (bParts[i] ?? 0);
     if (diff !== 0) return diff > 0 ? 1 : -1;

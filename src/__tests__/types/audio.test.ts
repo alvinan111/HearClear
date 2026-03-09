@@ -16,20 +16,20 @@ describe('AudioParams', () => {
     expect(p.headphoneMode).toBe('normal');
   });
 
-  it('可选 neuralDenoiser 为 boolean，默认语义为 false', () => {
-    const withOff: AudioParams = {
+  it('可选 neuralDenoiser 为 boolean，默认语义为 true', () => {
+    const withOn: AudioParams = {
       gain: 6,
       voiceEnhance: 0.5,
       noiseGate: 0.2,
       headphoneMode: HeadphoneMode.NORMAL,
-      neuralDenoiser: false,
-    };
-    const withOn: AudioParams = {
-      ...withOff,
       neuralDenoiser: true,
     };
-    expect(withOff.neuralDenoiser).toBe(false);
+    const withOff: AudioParams = {
+      ...withOn,
+      neuralDenoiser: false,
+    };
     expect(withOn.neuralDenoiser).toBe(true);
+    expect(withOff.neuralDenoiser).toBe(false);
   });
 
   it('可选 scene 为 default | tv', () => {

@@ -30,4 +30,10 @@ export const STORAGE_KEYS = {
   PRIVACY_AGREED: 'hearclear:privacy_agreed',
   /** 上次使用的音频参数（用于离线默认值） */
   LAST_AUDIO_PARAMS: 'hearclear:last_audio_params',
+  /** 听力图（听力测试结果） */
+  AUDIOGRAM: 'hearclear:audiogram',
+  /** 处方（由听力图计算） */
+  PRESCRIPTION: 'hearclear:prescription',
+  /** 用户反馈修正（运行中调节） */
+  FEEDBACK_CORRECTION: 'hearclear:feedback_correction',
 };

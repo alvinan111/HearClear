@@ -1,5 +1,13 @@
 import { useAudioStore } from '@stores/audio-store';
 import { AUDIO_CONFIG, HeadphoneMode } from '@config/audio';
+import { getItem } from '@utils/storage';
+
+jest.mock('@utils/storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  multiRemove: jest.fn(),
+}));
 
 // 每个测试前重置 store 到初始状态
 beforeEach(() => {
@@ -10,7 +18,10 @@ beforeEach(() => {
       noiseGate: AUDIO_CONFIG.DEFAULT_NOISE_GATE,
       headphoneMode: HeadphoneMode.NORMAL,
       scene: 'default',
-      neuralDenoiser: false,
+      neuralDenoiser: true,
+      audiogram: null,
+      prescription: null,
+      feedbackCorrection: null,
     },
     status: 'idle',
     headphoneConnected: false,
@@ -27,7 +38,7 @@ describe('初始状态', () => {
     expect(params.voiceEnhance).toBe(AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE);
     expect(params.noiseGate).toBe(AUDIO_CONFIG.DEFAULT_NOISE_GATE);
     expect(params.headphoneMode).toBe(HeadphoneMode.NORMAL);
-    expect(params.neuralDenoiser).toBe(false);
+    expect(params.neuralDenoiser).toBe(true);
   });
 
   it('初始 status 为 idle', () => {
@@ -111,8 +122,8 @@ describe('updateParams', () => {
 
   it('configLocked 时禁止修改 neuralDenoiser', () => {
     useAudioStore.getState().setConfigLocked(true);
-    useAudioStore.getState().updateParams({ neuralDenoiser: true });
-    expect(useAudioStore.getState().params.neuralDenoiser).toBe(false);
+    useAudioStore.getState().updateParams({ neuralDenoiser: false });
+    expect(useAudioStore.getState().params.neuralDenoiser).toBe(true);
   });
 
   it('可单独更新 noiseGate、voiceEnhance', () => {
@@ -123,10 +134,10 @@ describe('updateParams', () => {
   });
 
   it('可单独更新 neuralDenoiser', () => {
-    useAudioStore.getState().updateParams({ neuralDenoiser: true });
-    expect(useAudioStore.getState().params.neuralDenoiser).toBe(true);
     useAudioStore.getState().updateParams({ neuralDenoiser: false });
     expect(useAudioStore.getState().params.neuralDenoiser).toBe(false);
+    useAudioStore.getState().updateParams({ neuralDenoiser: true });
+    expect(useAudioStore.getState().params.neuralDenoiser).toBe(true);
   });
 
   it('updateParams 多次合并保留最后一次', () => {
@@ -145,10 +156,10 @@ describe('resetParams', () => {
     expect(params.voiceEnhance).toBe(AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE);
   });
 
-  it('resetParams 将 neuralDenoiser 恢复为 false', () => {
-    useAudioStore.getState().updateParams({ neuralDenoiser: true });
+  it('resetParams 将 neuralDenoiser 恢复为默认 true', () => {
+    useAudioStore.getState().updateParams({ neuralDenoiser: false });
     useAudioStore.getState().resetParams();
-    expect(useAudioStore.getState().params.neuralDenoiser).toBe(false);
+    expect(useAudioStore.getState().params.neuralDenoiser).toBe(true);
   });
 
   it('configLocked 时禁止重置', () => {
@@ -170,5 +181,57 @@ describe('setConfigLocked', () => {
     useAudioStore.getState().setConfigLocked(false);
     useAudioStore.getState().updateParams({ gain: 12 });
     expect(useAudioStore.getState().params.gain).toBe(12);
+  });
+});
+
+describe('setAudiogramAndPrescription', () => {
+  it('设置听力图与处方', () => {
+    const audiogram = { 250: 10, 500: 15, 1000: 20, 2000: 25, 4000: 30, 8000: 35 };
+    const prescription = { 100: 2, 250: 4, 800: 6, 1000: 8, 2500: 10, 4000: 12, 8000: 14 };
+    useAudioStore.getState().setAudiogramAndPrescription(audiogram, prescription);
+    expect(useAudioStore.getState().params.audiogram).toEqual(audiogram);
+    expect(useAudioStore.getState().params.prescription).toEqual(prescription);
+  });
+
+  it('可清空为 null', () => {
+    useAudioStore.getState().setAudiogramAndPrescription({ 250: 5, 500: 5, 1000: 5, 2000: 5, 4000: 5, 8000: 5 }, null);
+    useAudioStore.getState().setAudiogramAndPrescription(null, null);
+    expect(useAudioStore.getState().params.audiogram).toBeNull();
+    expect(useAudioStore.getState().params.prescription).toBeNull();
+  });
+});
+
+describe('updateFeedbackCorrection', () => {
+  it('合并 overall 修正', () => {
+    useAudioStore.getState().updateFeedbackCorrection({ overall: -2 });
+    expect(useAudioStore.getState().params.feedbackCorrection?.overall).toBe(-2);
+  });
+
+  it('合并 low/mid/high', () => {
+    useAudioStore.getState().updateFeedbackCorrection({ low: 1, mid: 0, high: -1 });
+    expect(useAudioStore.getState().params.feedbackCorrection?.low).toBe(1);
+    expect(useAudioStore.getState().params.feedbackCorrection?.mid).toBe(0);
+    expect(useAudioStore.getState().params.feedbackCorrection?.high).toBe(-1);
+  });
+
+  it('多次合并保留后者', () => {
+    useAudioStore.getState().updateFeedbackCorrection({ overall: 2 });
+    useAudioStore.getState().updateFeedbackCorrection({ overall: -1 });
+    expect(useAudioStore.getState().params.feedbackCorrection?.overall).toBe(-1);
+  });
+});
+
+describe('hydrateFromStorage', () => {
+  it('从存储加载合法数据时合并到 params', async () => {
+    (getItem as jest.Mock).mockImplementation((key: string) => {
+      if (key === 'hearclear:audiogram') return Promise.resolve({ 250: 5, 500: 10, 1000: 15, 2000: 20, 4000: 25, 8000: 30 });
+      if (key === 'hearclear:prescription') return Promise.resolve({ 100: 1, 250: 2, 800: 3, 1000: 4, 2500: 5, 4000: 6, 8000: 7 });
+      if (key === 'hearclear:feedback_correction') return Promise.resolve({ overall: -1, low: 0, mid: 0, high: 0 });
+      return Promise.resolve(null);
+    });
+    await useAudioStore.getState().hydrateFromStorage();
+    expect(useAudioStore.getState().params.audiogram).toEqual({ 250: 5, 500: 10, 1000: 15, 2000: 20, 4000: 25, 8000: 30 });
+    expect(useAudioStore.getState().params.prescription).toEqual({ 100: 1, 250: 2, 800: 3, 1000: 4, 2500: 5, 4000: 6, 8000: 7 });
+    expect(useAudioStore.getState().params.feedbackCorrection?.overall).toBe(-1);
   });
 });

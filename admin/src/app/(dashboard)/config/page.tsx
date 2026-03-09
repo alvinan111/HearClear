@@ -45,7 +45,7 @@ export default function RemoteConfigPage() {
       {announcement && (
         <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-6 mb-6">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-base">📢</span>
+            <span className="text-sm">📢</span>
             <h3 className="font-semibold text-cyan-400">全局公告</h3>
             <span className="badge badge-blue ml-auto">实时生效</span>
           </div>

@@ -36,7 +36,7 @@ export function useRealAudioLevel(): number {
   const recorderState = useAudioRecorderState(recorder, METERING_INTERVAL_MS);
 
   useEffect(() => {
-    if (!recorderState.isRecording) return;
+    if (!recorderState?.isRecording) return;
     const rawMetering = recorderState.metering;
     if (rawMetering == null) return;
     // expo-audio metering: 可能是 dB（负值）或 0~1，统一转为 0~1
@@ -47,7 +47,7 @@ export function useRealAudioLevel(): number {
     const smoothed = prevLevel.current * SMOOTH + raw * (1 - SMOOTH);
     prevLevel.current = smoothed;
     setLevel(smoothed);
-  }, [recorderState.isRecording, recorderState.metering]);
+  }, [recorderState?.isRecording, recorderState?.metering]);
 
   useEffect(() => {
     if (AudioEngine.isAvailable) return;

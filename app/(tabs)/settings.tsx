@@ -206,6 +206,13 @@ export default function SettingsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.audioParamRow, { marginTop: SPACING.md }]}
+            onPress={() => router.push('/hearing-test')}
+          >
+            <Text style={styles.audioParamLabel}>👂 {t('hearingTest.title')}</Text>
+            <Text style={styles.audioParamValue}>→</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.audioParamRow}
             onPress={() => router.push('/latency-test')}
           >
             <Text style={styles.audioParamLabel}>⏱️ {t('settings.latencyTest')}</Text>

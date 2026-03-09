@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -37,6 +37,7 @@ import {
   startBackgroundAudio,
   stopBackgroundAudio,
 } from '@services/background-audio';
+import { persistFeedbackCorrection } from '@services/hearing-test/feedbackCorrection';
 
 const IS_EXPO_GO = Constants.appOwnership === 'expo';
 
@@ -117,6 +118,11 @@ const specStyles = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 14,
     marginBottom: 14,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
   },
   labelRow: {
     flexDirection: 'row',
@@ -439,7 +445,14 @@ function SimpleSlider({
       >
         <View style={sliderStyles.trackBg} pointerEvents="none" />
         <View
-          style={[sliderStyles.trackFill, { width: `${value * 100}%`, backgroundColor: color }]}
+          style={[
+            sliderStyles.trackFill,
+            {
+              width: `${value * 100}%` as `${number}%`,
+              backgroundColor: color,
+              shadowColor: color,
+            },
+          ]}
           pointerEvents="none"
         />
         {[0.25, 0.5, 0.75].map((v) => (
@@ -499,6 +512,10 @@ const sliderStyles = StyleSheet.create({
     left: 0,
     height: TRACK_H,
     borderRadius: TRACK_H / 2,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 4,
   },
   tick: {
     position: 'absolute',
@@ -548,6 +565,141 @@ const sliderStyles = StyleSheet.create({
   rangeLabel: { fontSize: 10, color: COLORS.textMuted },
 });
 
+// ─── 运行中音量反馈：太大声/太小声/刚好 + 可展开低/中/高（dB）────────────────────
+const FEEDBACK_STEP_DB = 2;
+const BAND_MIN = -6;
+const BAND_MAX = 6;
+
+function FeedbackCorrectionPanel({
+  params,
+  updateFeedbackCorrection,
+  persistFeedbackCorrection,
+}: {
+  params: import('@types/audio').AudioParams;
+  updateFeedbackCorrection: (p: Partial<import('@types/audiogram').FeedbackCorrection>) => void;
+  persistFeedbackCorrection: (fc: import('@types/audiogram').FeedbackCorrection) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [advanced, setAdvanced] = useState(false);
+  const fc = params.feedbackCorrection ?? { overall: 0, low: 0, mid: 0, high: 0 };
+
+  const apply = useCallback(
+    (partial: Partial<typeof fc>) => {
+      updateFeedbackCorrection(partial);
+      const next = { ...fc, ...partial };
+      persistFeedbackCorrection(next).catch(() => {});
+    },
+    [fc, updateFeedbackCorrection, persistFeedbackCorrection]
+  );
+
+  return (
+    <View style={feedbackStyles.panel}>
+      <View style={feedbackStyles.card}>
+        <View style={feedbackStyles.cardTopAccent} />
+        <Text style={feedbackStyles.title}>{t('feedbackCorrection.title')}</Text>
+        <View style={feedbackStyles.row}>
+          <TouchableOpacity
+            style={[feedbackStyles.btn, feedbackStyles.btnLoud]}
+            onPress={() => apply({ overall: Math.max(-6, (fc.overall ?? 0) - FEEDBACK_STEP_DB) })}
+          >
+            <Text style={feedbackStyles.btnText}>{t('feedbackCorrection.tooLoud')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[feedbackStyles.btn, feedbackStyles.btnJust]}
+            onPress={() => apply({ overall: 0 })}
+          >
+            <Text style={feedbackStyles.btnText}>{t('feedbackCorrection.justRight')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[feedbackStyles.btn, feedbackStyles.btnQuiet]}
+            onPress={() => apply({ overall: Math.min(6, (fc.overall ?? 0) + FEEDBACK_STEP_DB) })}
+          >
+            <Text style={feedbackStyles.btnText}>{t('feedbackCorrection.tooQuiet')}</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={feedbackStyles.advancedToggle}
+          onPress={() => setAdvanced((a) => !a)}
+        >
+          <Text style={feedbackStyles.advancedToggleText}>
+            {t('feedbackCorrection.advanced')} {advanced ? '▼' : '▶'}
+          </Text>
+        </TouchableOpacity>
+        {advanced && (
+          <View style={feedbackStyles.sliders}>
+            {(['low', 'mid', 'high'] as const).map((band) => {
+              const val = fc[band] ?? 0;
+              return (
+                <View key={band} style={feedbackStyles.sliderRow}>
+                  <Text style={feedbackStyles.sliderLabel}>{t(`feedbackCorrection.${band}`)}</Text>
+                  <TouchableOpacity
+                    style={feedbackStyles.bandBtn}
+                    onPress={() => apply({ [band]: Math.max(BAND_MIN, val - 1) })}
+                  >
+                    <Text style={feedbackStyles.bandBtnText}>−</Text>
+                  </TouchableOpacity>
+                  <Text style={feedbackStyles.sliderValue}>{val} dB</Text>
+                  <TouchableOpacity
+                    style={feedbackStyles.bandBtn}
+                    onPress={() => apply({ [band]: Math.min(BAND_MAX, val + 1) })}
+                  >
+                    <Text style={feedbackStyles.bandBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const feedbackStyles = StyleSheet.create({
+  panel: { marginBottom: 14 },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+    overflow: 'hidden',
+  },
+  cardTopAccent: {
+    position: 'absolute',
+    top: 0, left: 14, right: 14,
+    height: 1,
+    backgroundColor: COLORS.primary,
+    opacity: 0.35,
+  },
+  title: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+    marginBottom: 10,
+  },
+  row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  btn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  btnLoud: { backgroundColor: COLORS.danger + '30', borderWidth: 1, borderColor: COLORS.danger },
+  btnJust: { backgroundColor: COLORS.success + '30', borderWidth: 1, borderColor: COLORS.success },
+  btnQuiet: { backgroundColor: COLORS.primary + '30', borderWidth: 1, borderColor: COLORS.primary },
+  btnText: { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  advancedToggle: { paddingVertical: 6 },
+  advancedToggleText: { fontSize: 12, color: COLORS.primary },
+  sliders: { marginTop: 8, gap: 6 },
+  sliderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sliderLabel: { fontSize: 12, color: COLORS.textSecondary, minWidth: 36 },
+  bandBtn: { width: 32, height: 28, borderRadius: 6, backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
+  bandBtnText: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  sliderValue: { fontSize: 11, color: COLORS.textMuted, minWidth: 36 },
+});
+
 // ─── 首页 ─────────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -556,6 +708,7 @@ export default function HomeScreen() {
   const {
     status, params, configLocked, feedbackFrequency, error,
     setStatus, setError, updateParams, setHeadphoneConnected,
+    updateFeedbackCorrection,
   } = useAudioStore();
 
   const { showPaywall, isPaid, isInTrial, trialDaysRemaining } = useSubscriptionStore();
@@ -588,31 +741,37 @@ export default function HomeScreen() {
     }
   }, [headphoneConnected, status]);
 
-  // ── 进入首页时自动开启引擎（无需再点一次）
+  // ── 进入首页时自动开启引擎（无需再点一次）；包一层 try/catch 避免未捕获错误导致红屏
   useEffect(() => {
     if (hasAutoStarted.current) return;
     hasAutoStarted.current = true;
 
     const doAutoStart = async () => {
-      const { status: s, params: p } = useAudioStore.getState();
-      if (s === 'running' || s === 'starting') return;
-      if (useSubscriptionStore.getState().showPaywall) return;
+      try {
+        const { status: s } = useAudioStore.getState();
+        if (s === 'running' || s === 'starting') return;
+        if (useSubscriptionStore.getState().showPaywall) return;
 
-      const ok = await requestPermission();
-      if (!ok) return;
+        const ok = await requestPermission();
+        if (!ok) return;
 
-      setStatus('starting');
-      setError(null);
-      const latestParams = useAudioStore.getState().params;
-      const result = await AudioEngine.start(latestParams);
-      if (result.error) {
+        setStatus('starting');
+        setError(null);
+        const latestParams = useAudioStore.getState().params;
+        const result = await AudioEngine.start(latestParams);
+        if (result.error) {
+          setStatus('error');
+          setError(result.error);
+        } else {
+          setStatus('running');
+          const connected = useAudioStore.getState().headphoneConnected;
+          AudioEngine.setOutputMuted(!connected);
+          await startBackgroundAudio().catch(() => {});
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '启动失败，请重试';
         setStatus('error');
-        setError(result.error);
-      } else {
-        setStatus('running');
-        const connected = useAudioStore.getState().headphoneConnected;
-        AudioEngine.setOutputMuted(!connected);
-        await startBackgroundAudio().catch(() => {});
+        setError(msg);
       }
     };
 
@@ -659,32 +818,54 @@ export default function HomeScreen() {
   }, [isRunning, isStarting, headphoneConnected, params, showPaywall]);
 
   return (
-    <LinearGradient colors={['#040810', '#060D1E']} style={styles.root}>
+    <View style={styles.root}>
+      <LinearGradient colors={['#040810', '#060D1E']} style={StyleSheet.absoluteFill} />
+      {/* 顶部科技感光晕 */}
+      <LinearGradient
+        colors={['rgba(56,189,248,0.12)', 'rgba(56,189,248,0.02)', 'transparent']}
+        style={styles.rootGlow}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
           {/* ── 顶部栏 */}
           <View style={styles.topBar}>
-            <View>
-              <Text style={styles.appName}>HEAR CLEAR</Text>
-              <Text style={styles.appSub}>AI 助听系统</Text>
-            </View>
-            <View style={styles.topBadges}>
+            <View style={styles.topBarRow}>
+              <View style={styles.topBarLeft}>
+                <Text style={styles.appName}>HEAR CLEAR</Text>
+                <Text style={styles.appSub}>AI 助听系统</Text>
+              </View>
+              <View style={styles.topBadges}>
               {isOfflineMode && <View style={[styles.badge, { borderColor: COLORS.warning }]}><Text style={[styles.badgeText, { color: COLORS.warning }]}>OFFLINE</Text></View>}
               {isPaid && <View style={[styles.badge, { borderColor: COLORS.success }]}><Text style={[styles.badgeText, { color: COLORS.success }]}>PRO</Text></View>}
             </View>
+            </View>
+            <View style={styles.topBarAccentLine} />
           </View>
 
-          {/* ── 耳机/外放状态提示：无耳机时仅提示，继续采集不输出 */}
-          <View style={styles.statusHintRow}>
-            <Text style={[styles.statusHintText, { color: headphoneConnected ? COLORS.success : COLORS.textMuted }]}>
-              {headphoneConnected ? '🎧 已连接耳机' : '📢 未连接耳机，当前仅采集不输出，连接耳机后可听到声音'}
-            </Text>
-          </View>
+          {/* ── 耳机/外放状态提示：无耳机时醒目提示，继续采集不输出 */}
+          {headphoneConnected ? (
+            <View style={styles.statusHintRow}>
+              <Text style={[styles.statusHintText, { color: COLORS.success }]}>
+                🎧 已连接耳机
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.noHeadphoneBanner}>
+              <Text style={styles.noHeadphoneBannerTitle}>📢 未连接耳机</Text>
+              <Text style={styles.noHeadphoneBannerDesc}>当前仅采集不输出声音，连接耳机后可听到增强后的声音。</Text>
+            </View>
+          )}
 
           {/* ── 输出设备选择（仅耳机 / 骨传导，无外放） */}
           <View style={styles.deviceCard}>
-            <Text style={styles.deviceCardTitle}>输出设备</Text>
+            <View style={styles.cardTopAccent} />
+            <View style={styles.sectionTitleRow}>
+              <View style={[styles.sectionTitleBar, { backgroundColor: COLORS.primary }]} />
+              <Text style={styles.deviceCardTitle}>输出设备</Text>
+            </View>
             <View style={styles.deviceBtnRow}>
               {OUTPUT_DEVICE_OPTIONS.map((mode) => {
                 const { icon, label, color } = mode === HeadphoneMode.NORMAL
@@ -723,6 +904,15 @@ export default function HomeScreen() {
           <DualSpectrum />
           <Text style={styles.spectrumHint}>环境音向上，人声向下；100Hz～8kHz</Text>
 
+          {/* ── 运行中：音量反馈修正（太大声/太小声/刚好 + 可展开低/中/高）*/}
+          {isRunning && (
+            <FeedbackCorrectionPanel
+              params={params}
+              updateFeedbackCorrection={updateFeedbackCorrection}
+              persistFeedbackCorrection={persistFeedbackCorrection}
+            />
+          )}
+
           {/* ── 反馈抑制提示 */}
           {feedbackFrequency != null && (
             <View style={styles.alertRow}>
@@ -754,8 +944,12 @@ export default function HomeScreen() {
 
           {/* ── 音效参数 */}
           <View style={styles.paramsCard}>
+            <View style={styles.cardTopAccent} />
             <View style={styles.paramsHead}>
-              <Text style={styles.paramsTitle}>/ 音效参数 /</Text>
+              <View style={styles.sectionTitleRow}>
+                <View style={[styles.sectionTitleBar, { backgroundColor: COLORS.primary }]} />
+                <Text style={styles.paramsTitle}>[ 音效参数 ]</Text>
+              </View>
               {configLocked && <Text style={styles.lockedTxt}>🔒 离线锁定</Text>}
             </View>
             <SimpleSlider
@@ -801,17 +995,56 @@ export default function HomeScreen() {
 // ─── 样式 ─────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  rootGlow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 320,
+    pointerEvents: 'none',
+  },
   safe: { flex: 1 },
   scroll: { paddingHorizontal: 20, paddingTop: 12 },
 
   // 顶栏
-  topBar: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
-  appName: { fontSize: 20, fontWeight: '800', color: COLORS.primary, letterSpacing: 4 },
+  topBar: { marginBottom: 20 },
+  topBarRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  topBarLeft: {},
+  topBarAccentLine: {
+    height: 1,
+    marginTop: 10,
+    backgroundColor: COLORS.primary,
+    opacity: 0.4,
+    borderRadius: 1,
+  },
+  appName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.primary,
+    letterSpacing: 4,
+    textShadowColor: COLORS.primary,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+  },
   appSub: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2, marginTop: 2 },
   topBadges: { flexDirection: 'row', gap: 8, marginTop: 4 },
   badge: { borderWidth: 1, borderRadius: 4, paddingHorizontal: 7, paddingVertical: 2 },
   badgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 1 },
 
+  // 卡片顶边高光 + 区块标题
+  cardTopAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 14,
+    right: 14,
+    height: 1,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    backgroundColor: COLORS.primary,
+    opacity: 0.35,
+  },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sectionTitleBar: { width: 3, height: 12, borderRadius: 2 },
   // 设备选择卡
   deviceCard: {
     backgroundColor: COLORS.surface,
@@ -820,6 +1053,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 14,
     marginBottom: 20,
+    overflow: 'hidden',
   },
   deviceCardTitle: {
     fontSize: 10,
@@ -858,6 +1092,26 @@ const styles = StyleSheet.create({
   },
   statusHintRow: { marginBottom: 8 },
   statusHintText: { fontSize: 12 },
+  noHeadphoneBanner: {
+    backgroundColor: COLORS.warningDim,
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+  },
+  noHeadphoneBannerTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.warning,
+    marginBottom: 4,
+  },
+  noHeadphoneBannerDesc: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
 
   // 按钮区
   btnZone: { alignItems: 'center', marginBottom: 8, marginTop: 4 },
@@ -1069,9 +1323,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     padding: 18,
     marginBottom: 12,
+    overflow: 'hidden',
   },
   paramsHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  paramsTitle: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted, letterSpacing: 3 },
+  paramsTitle: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted, letterSpacing: 2 },
   lockedTxt: { fontSize: 11, color: COLORS.warning },
 
 

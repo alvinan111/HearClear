@@ -9,7 +9,14 @@ const { SpeechEnhancementNative } = NativeModules;
 export function setEnabled(enabled: boolean): void {
   const audio = NativeModules?.AudioAPIModule;
   if (typeof audio?.setSpeechEnhancementEnabled === 'function') {
-    audio.setSpeechEnhancementEnabled(enabled);
+    try {
+      audio.setSpeechEnhancementEnabled(enabled);
+    } catch (e) {
+      // 原生未 patch 或 JNI 缺失（如 setSpeechEnhancementEnabledNative）时可能抛错，不向外抛
+      if (__DEV__) {
+        console.warn('[SpeechEnhancement] setSpeechEnhancementEnabled failed:', e);
+      }
+    }
   }
 }
 

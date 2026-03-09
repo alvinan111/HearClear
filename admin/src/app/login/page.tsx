@@ -34,8 +34,8 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(6,182,212,0.15),transparent)]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-cyan-500/[0.03] blur-3xl" />
         <div className="relative z-10 text-center max-w-md">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center mx-auto mb-8 shadow-lg shadow-cyan-500/20">
-            <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h3l-3.5-3.5M19 12a7 7 0 11-14 0 7 7 0 0114 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 19a2 2 0 100-4 2 2 0 000 4z"/></svg>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center mx-auto mb-8 shadow-lg shadow-cyan-500/20">
+            <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h3l-3.5-3.5M19 12a7 7 0 11-14 0 7 7 0 0114 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 19a2 2 0 100-4 2 2 0 000 4z"/></svg>
           </div>
           <h1 className="text-4xl font-bold text-white tracking-tight mb-3">HearClear</h1>
           <p className="text-zinc-500 text-base font-medium">AI 助听器 · 运营管理平台</p>
@@ -54,8 +54,8 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8 lg:p-12">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
-              <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h3l-3.5-3.5M19 12a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+              <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h3l-3.5-3.5M19 12a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
             <span className="text-lg font-bold text-white">HearClear</span>
           </div>

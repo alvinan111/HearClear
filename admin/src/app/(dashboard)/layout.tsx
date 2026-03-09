@@ -32,8 +32,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 flex flex-col border-r border-white/[0.06] bg-[#0c0c0e]">
         <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.06]">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
-            <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h3l-3.5-3.5M19 12a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+            <svg className="w-3.5 h-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h3l-3.5-3.5M19 12a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           </div>
           <div>
             <p className="text-sm font-bold text-white leading-none">HearClear</p>
@@ -53,7 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
                 }`}
               >
-                <Icon className="w-4 h-4 flex-shrink-0 opacity-80" />
+                <Icon className="w-3.5 h-3.5 flex-shrink-0 opacity-80" />
                 {label}
               </Link>
             );
@@ -63,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-3 border-t border-white/[0.06]">
           <button onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-all">
-            <LogoutIcon className="w-4 h-4" />
+            <LogoutIcon className="w-3.5 h-3.5" />
             退出登录
           </button>
         </div>
@@ -76,7 +76,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {NAV.find(n => n.href === '/' ? pathname === '/' : pathname.startsWith(n.href))?.label ?? '管理后台'}
           </h1>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xs font-bold">A</div>
+            <div className="w-6 h-6 rounded-md bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-[10px] font-bold">A</div>
             <span className="text-sm text-zinc-400 font-medium">Admin</span>
           </div>
         </header>

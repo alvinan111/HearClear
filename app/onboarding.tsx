@@ -71,6 +71,13 @@ export default function OnboardingScreen() {
     }
   }
 
+  function goToHearingTest() {
+    setItem(STORAGE_KEYS.ONBOARDING_DONE, true).then(() => {
+      useSettingsStore.getState().setOnboardingDone(true);
+      router.replace('/hearing-test');
+    });
+  }
+
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0) {
@@ -108,7 +115,6 @@ export default function OnboardingScreen() {
 
       {/* 底部：指示器 + 按钮 */}
       <View style={styles.footer}>
-        {/* 点状指示器 */}
         <View style={styles.dots}>
           {SLIDES.map((_, i) => (
             <View
@@ -118,19 +124,34 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        {/* 下一步/开始 按钮 */}
-        <TouchableOpacity style={styles.nextButton} onPress={goNext} activeOpacity={0.85}>
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.primaryDark]}
-            style={styles.nextGradient}
-          >
-            <Text style={styles.nextText}>
-              {currentIndex === SLIDES.length - 1
-                ? t('onboarding.getStarted')
-                : t('onboarding.next')}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        {currentIndex === SLIDES.length - 1 ? (
+          <View style={styles.lastSlideButtons}>
+            <TouchableOpacity style={styles.nextButton} onPress={goNext} activeOpacity={0.85}>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.primaryDark]}
+                style={styles.nextGradient}
+              >
+                <Text style={styles.nextText}>{t('onboarding.getStarted')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.hearingTestButton}
+              onPress={goToHearingTest}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.hearingTestButtonText}>{t('hearingTest.startTest')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.nextButton} onPress={goNext} activeOpacity={0.85}>
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.primaryDark]}
+              style={styles.nextGradient}
+            >
+              <Text style={styles.nextText}>{t('onboarding.next')}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -234,10 +255,28 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     width: 28,
   },
+  lastSlideButtons: {
+    width: '100%',
+    gap: SPACING.md,
+  },
   nextButton: {
     width: '100%',
     borderRadius: BORDER_RADIUS.full,
     overflow: 'hidden',
+  },
+  hearingTestButton: {
+    width: '100%',
+    height: 64,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hearingTestButtonText: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.primary,
   },
   nextGradient: {
     height: 64,

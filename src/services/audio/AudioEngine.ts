@@ -17,6 +17,7 @@ import { AUDIO_CONFIG, AUDIO_PRESETS, HeadphoneMode } from '@config/audio';
 import type { AudioParams, AudioError } from '@types/audio';
 import { useAudioStore } from '@stores/audio-store';
 import { clampGainForPreset, dbToLinear as dbToLinearUtil } from '@services/audio/audioUtils';
+import { PRESCRIPTION_BAND_FREQS } from '@types/audiogram';
 
 // ─── Native 模块动态加载 ──────────────────────────────────────────────────────
 let AudioContextClass: (new (options?: { sampleRate?: number }) => import('react-native-audio-api').AudioContext) | null = null;
@@ -74,8 +75,9 @@ export const GATE_ANALYSER_FFT = 512;
 const GATE_CLOSED_GAIN = 0; // 杂音全关，只留人声
 const VOICE_BAND_LOW_HZ = 200;
 const VOICE_BAND_HIGH_HZ = 4000;
-const VOICE_BANDPASS_LOW = 180;
-const VOICE_BANDPASS_HIGH = 4200;
+/** 人声带通：收紧到 200–4000 Hz，进一步砍掉超低频与极高频环境噪 */
+const VOICE_BANDPASS_LOW = 200;
+const VOICE_BANDPASS_HIGH = 4000;
 
 interface EngineState {
   ctx: Ctx | null;
@@ -87,6 +89,8 @@ interface EngineState {
   gateGainNode: GainNode | null;
   /** 无耳机时置 0，只采集不输出 */
   outputMuteGain: GainNode | null;
+  /** EQ 滤波器引用，用于运行时应用处方与反馈修正 */
+  eqFilters: BiquadFilterNode[] | null;
   gateInterval: ReturnType<typeof setInterval> | null;
   gateBuf: Float32Array;
   gateFreqBuf: Float32Array;
@@ -107,6 +111,7 @@ const state: EngineState = {
   gateAnalyser: null,
   gateGainNode: null,
   outputMuteGain: null,
+  eqFilters: null,
   gateInterval: null,
   gateBuf: new Float32Array(GATE_ANALYSER_FFT),
   gateFreqBuf: new Float32Array(GATE_ANALYSER_FFT / 2),
@@ -200,7 +205,12 @@ export const AudioEngine = {
         try {
           require('react-native-speech-enhancement')?.ensureNativeInit?.();
         } catch { /* optional */ }
-        speechEnhancement.setEnabled(!!params.neuralDenoiser);
+        try {
+          speechEnhancement.setEnabled(!!params.neuralDenoiser);
+        } catch (e) {
+          // 原生未 patch 或 JNI 缺失时 setSpeechEnhancementEnabledNative 可能抛错，不中断引擎
+          console.warn('[AudioEngine] speech enhancement setEnabled failed:', e);
+        }
       }
 
       // ── 创建麦克风输入节点（正确方式：RecorderAdapterNode）────────────────
@@ -227,15 +237,24 @@ export const AudioEngine = {
       voiceLowpass.frequency.value = VOICE_BANDPASS_HIGH;
       voiceLowpass.Q.value = 0.7;
 
-      // ── 人声 EQ 滤波器组 ────────────────────────────────────────────────
-      const eqFilters: BiquadFilterNode[] = AUDIO_CONFIG.EQ_BANDS.map((b) => {
+      // ── 人声 EQ 滤波器组（处方与反馈修正在门控循环中动态更新）────────────
+      const eqFilters: BiquadFilterNode[] = AUDIO_CONFIG.EQ_BANDS.map((b, i) => {
         const f: BiquadFilterNode = ctx.createBiquadFilter();
         f.type = b.type as BiquadFilterNode['type'];
         f.frequency.value = b.frequency;
-        f.gain.value = b.gain * params.voiceEnhance;
+        const prescriptionGain = params.prescription?.[PRESCRIPTION_BAND_FREQS[i] as keyof typeof params.prescription] ?? 0;
+        const fb = params.feedbackCorrection;
+        const overall = fb?.overall ?? 0;
+        const low = fb?.low ?? 0;
+        const mid = fb?.mid ?? 0;
+        const high = fb?.high ?? 0;
+        const bandFreq = PRESCRIPTION_BAND_FREQS[i];
+        const feedbackGain = overall + (bandFreq <= 250 ? low : bandFreq <= 2500 ? mid : high);
+        f.gain.value = b.gain * params.voiceEnhance + prescriptionGain + feedbackGain;
         f.Q.value = b.q;
         return f;
       });
+      state.eqFilters = eqFilters;
 
       if (params.headphoneMode === HeadphoneMode.BONE_CONDUCTION && preset.extraEQ) {
         const bc: BiquadFilterNode = ctx.createBiquadFilter();
@@ -244,6 +263,15 @@ export const AudioEngine = {
         bc.gain.value = preset.extraEQ.gain;
         bc.Q.value = preset.extraEQ.q;
         eqFilters.push(bc);
+      }
+
+      if ((params.scene ?? 'default') === 'tv' && AUDIO_CONFIG.TV_SCENE_EQ) {
+        const tvEq: BiquadFilterNode = ctx.createBiquadFilter();
+        tvEq.type = 'peaking';
+        tvEq.frequency.value = AUDIO_CONFIG.TV_SCENE_EQ.frequency;
+        tvEq.gain.value = AUDIO_CONFIG.TV_SCENE_EQ.gain * (params.voiceEnhance ?? 1);
+        tvEq.Q.value = AUDIO_CONFIG.TV_SCENE_EQ.q;
+        eqFilters.push(tvEq);
       }
 
       // ── 动态噪声门：人声通过、环境音压低；周期 + attack/release 由 GATE 或 SCENE_PRESETS 决定 ────
@@ -308,6 +336,27 @@ export const AudioEngine = {
               gainNode.gain.setTargetAtTime(targetGain, now, tc);
             } else {
               gainNode.gain.value = targetGain;
+            }
+          }
+
+          // 处方与反馈修正：动态更新前 7 个 EQ 频带（与 PRESCRIPTION_BAND_FREQS 对应）
+          const eqs = state.eqFilters;
+          if (eqs) {
+            const n = Math.min(eqs.length, PRESCRIPTION_BAND_FREQS.length);
+            const p = storeParams;
+            const prescription = p.prescription;
+            const fb = p.feedbackCorrection;
+            const overall = fb?.overall ?? 0;
+            const low = fb?.low ?? 0;
+            const mid = fb?.mid ?? 0;
+            const high = fb?.high ?? 0;
+            for (let i = 0; i < n; i++) {
+              const band = AUDIO_CONFIG.EQ_BANDS[i];
+              const baseGain = band.gain * (p.voiceEnhance ?? 1);
+              const prescriptionGain = prescription?.[PRESCRIPTION_BAND_FREQS[i] as keyof typeof prescription] ?? 0;
+              const bandFreq = PRESCRIPTION_BAND_FREQS[i];
+              const feedbackGain = overall + (bandFreq <= 250 ? low : bandFreq <= 2500 ? mid : high);
+              eqs[i].gain.value = baseGain + prescriptionGain + feedbackGain;
             }
           }
         }, gateUpdateMs);
@@ -395,7 +444,13 @@ export const AudioEngine = {
   // ── 停止 ──────────────────────────────────────────────────────────────────
   async stop(): Promise<void> {
     const speechEnhancement = getSpeechEnhancementModule();
-    if (speechEnhancement?.setEnabled) speechEnhancement.setEnabled(false);
+    if (speechEnhancement?.setEnabled) {
+      try {
+        speechEnhancement.setEnabled(false);
+      } catch (e) {
+        console.warn('[AudioEngine] speech enhancement setEnabled(false) failed:', e);
+      }
+    }
 
     if (state.gateInterval) {
       clearInterval(state.gateInterval);
@@ -432,26 +487,30 @@ export const AudioEngine = {
     }
   },
 
-  // ── 对外暴露频谱数据（每帧调用） ──────────────────────────────────────────
+  // ── 对外暴露频谱数据（每帧调用）；try/catch 防止 analyser 异常导致 UI 崩 ──
   getSpectrumData(numBars = 24): { voice: number[]; env: number[] } | null {
     if (!state.isRunning || !isNativeAvailable) return null;
+    try {
+      const sr = state.ctx?.sampleRate ?? 44100;
+      const binCount = state.rawBuf?.length ?? 0;
+      if (binCount <= 0) return null;
+      const hzPerBin = (sr / 2) / binCount;
 
-    const sr = state.ctx?.sampleRate ?? 44100;
-    const binCount = state.rawBuf.length;
-    const hzPerBin = (sr / 2) / binCount;
+      const VOICE_LO = 300, VOICE_HI = 3500;
+      const ENV_LO1 = 30, ENV_HI1 = 300;
+      const ENV_LO2 = 3500, ENV_HI2 = 8000;
 
-    const VOICE_LO = 300, VOICE_HI = 3500;
-    const ENV_LO1 = 30, ENV_HI1 = 300;
-    const ENV_LO2 = 3500, ENV_HI2 = 8000;
+      state.voiceAnalyser?.getFloatFrequencyData(state.voiceBuf);
+      state.rawAnalyser?.getFloatFrequencyData(state.rawBuf);
 
-    state.voiceAnalyser?.getFloatFrequencyData(state.voiceBuf);
-    state.rawAnalyser?.getFloatFrequencyData(state.rawBuf);
+      const voice = extractBars(state.voiceBuf, binCount, hzPerBin, VOICE_LO, VOICE_HI, numBars);
+      const envLow = extractBars(state.rawBuf, binCount, hzPerBin, ENV_LO1, ENV_HI1, numBars >> 1);
+      const envHigh = extractBars(state.rawBuf, binCount, hzPerBin, ENV_LO2, ENV_HI2, numBars - (numBars >> 1));
 
-    const voice = extractBars(state.voiceBuf, binCount, hzPerBin, VOICE_LO, VOICE_HI, numBars);
-    const envLow = extractBars(state.rawBuf, binCount, hzPerBin, ENV_LO1, ENV_HI1, numBars >> 1);
-    const envHigh = extractBars(state.rawBuf, binCount, hzPerBin, ENV_LO2, ENV_HI2, numBars - (numBars >> 1));
-
-    return { voice, env: [...envLow, ...envHigh] };
+      return { voice, env: [...envLow, ...envHigh] };
+    } catch {
+      return null;
+    }
   },
 };
 

@@ -37,27 +37,32 @@ export const AUDIO_CONFIG = {
       gateUpdateMs: 25,
       gateAttackMs: 20,
       gateReleaseMs: 120,
-      /** 阈值 = THRESHOLD_BASE + noiseGate * THRESHOLD_SCALE */
+      /** 阈值 = THRESHOLD_BASE + noiseGate * THRESHOLD_SCALE；提高 scale 加强环境音抑制 */
       thresholdBase: 0.002,
-      thresholdScale: 0.04,
+      thresholdScale: 0.052,
     },
+    /** 电视前：门限略低便于电视对白通过，release 略长减少句尾被切 */
     tv: {
       gateUpdateMs: 25,
-      gateAttackMs: 25,
-      gateReleaseMs: 150,
-      thresholdBase: 0.0015,
-      thresholdScale: 0.035,
+      gateAttackMs: 20,
+      gateReleaseMs: 165,
+      thresholdBase: 0.001,
+      thresholdScale: 0.038,
     },
   } as const,
 
-  /** 多段 EQ 配置（人声增强） */
+  /** 电视场景专用 EQ：强化对白频段 1.6kHz（电视人声清晰度） */
+  TV_SCENE_EQ: { frequency: 1600, gain: 2.5, q: 0.8 } as const,
+
+  /** 多段 EQ：加强环境音压（低/高架）与人声段提升 */
   EQ_BANDS: [
-    { type: 'lowshelf' as const, frequency: 100, gain: -8, q: 1.0 },   // 压低低频噪音
-    { type: 'peaking' as const, frequency: 250, gain: 3, q: 1.0 },      // 人声基频
-    { type: 'peaking' as const, frequency: 1000, gain: 6, q: 0.8 },     // 核心共振峰
-    { type: 'peaking' as const, frequency: 2500, gain: 5, q: 1.0 },     // 语言清晰度
-    { type: 'peaking' as const, frequency: 4000, gain: 3, q: 1.2 },     // 齿音/辅音
-    { type: 'highshelf' as const, frequency: 8000, gain: -6, q: 1.0 },  // 压低高频噪音
+    { type: 'lowshelf' as const, frequency: 100, gain: -11, q: 1.0 },   // 更强压低低频（空调/交通）
+    { type: 'peaking' as const, frequency: 250, gain: 4, q: 1.0 },      // 人声基频
+    { type: 'peaking' as const, frequency: 800, gain: 3, q: 0.8 },      // 人声厚度
+    { type: 'peaking' as const, frequency: 1000, gain: 7, q: 0.75 },     // 核心共振峰
+    { type: 'peaking' as const, frequency: 2500, gain: 6, q: 1.0 },     // 语言清晰度
+    { type: 'peaking' as const, frequency: 4000, gain: 4, q: 1.1 },    // 齿音/辅音
+    { type: 'highshelf' as const, frequency: 8000, gain: -9, q: 1.0 },   // 更强压低高频噪音（嘶嘶）
   ],
 
   /** AEC 回声消除：依赖系统（iOS voiceChat / Android VOICE_COMMUNICATION），不能有一点回音时需启用 */

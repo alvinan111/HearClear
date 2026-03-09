@@ -58,11 +58,15 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
   },
 
   loadFromCache: async () => {
-    const cached = await getItem<AppConfig>(STORAGE_KEYS.APP_CONFIG);
-    const cachedVersions = await getItem<AppVersion>(STORAGE_KEYS.APP_VERSIONS);
-    const lastSync = await getItem<string>(STORAGE_KEYS.LAST_SYNC_AT);
-    if (cached) {
-      set({ config: cached, versions: cachedVersions, lastSyncAt: lastSync });
+    try {
+      const cached = await getItem<AppConfig>(STORAGE_KEYS.APP_CONFIG);
+      const cachedVersions = await getItem<AppVersion>(STORAGE_KEYS.APP_VERSIONS);
+      const lastSync = await getItem<string>(STORAGE_KEYS.LAST_SYNC_AT);
+      if (cached) {
+        set({ config: cached, versions: cachedVersions, lastSyncAt: lastSync });
+      }
+    } catch {
+      set({ isOfflineMode: true, isLoading: false });
     }
   },
 

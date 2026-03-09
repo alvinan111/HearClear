@@ -81,7 +81,8 @@
 | 系统 AEC/降噪 | VoiceCommunication，可选关闭预处理 | 已通过 patch 使用 VoiceCommunication | 基本一致；可补充「关闭系统降噪」选项 |
 | FFT 窗口 | 128 或 256 | 2048（门控与频谱） | 延迟与频率分辨率均与目标不符 |
 | AI 语音增强 | HANCE / LiteRT，10–20ms | 无 | 未接入 |
-| WDRC / 听力图 | 多通道 WDRC + Audiogram | 仅 EQ + 噪声门 + 固定 Notch | 无个性化听力补偿 |
+| WDRC / 听力图 | 多通道 WDRC + Audiogram | 可选听力测试 → 处方 + EQ 频带增益；无处方时均匀放大 | 已实现简化半增益处方与 7 段 EQ 映射 |
+| 反馈修正 | 用户实时调节 | 运行中「太大声/太小声/刚好」+ 低/中/高频微调，持久化到 AsyncStorage，门控循环中更新 EQ | 已实现 |
 | ADPF | 可选，高负载时防降频 | 未使用 | 未使用 |
 
 ---
@@ -121,6 +122,7 @@
 ## 六、参考与相关文档
 
 - 管线与门控：`src/services/audio/AudioEngine.ts`、`src/config/audio.ts`
+- 听力测试、处方公式与反馈修正流程：`docs/hearing-test-and-prescription.md`
 - 延迟测量与门控参数：`docs/latency-and-vad-roadmap.md`
 - 实现约定与 Android 补丁：`docs/implementation-notes.md`
 - 啸叫与反馈抑制：`docs/android-feedback-solution.md`、`docs/feedback-suppression.md`

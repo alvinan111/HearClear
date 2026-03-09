@@ -76,8 +76,12 @@ export const useSubscriptionStore = create<SubscriptionStore>((set) => ({
   },
 
   loadFromCache: async (userProfile, globalTrialDays) => {
-    const cachedProfile = userProfile ?? await getItem<UserProfile>(STORAGE_KEYS.USER_PROFILE);
-    const computed = computeState(null, cachedProfile, globalTrialDays);
-    set({ ...computed, isLoading: false });
+    try {
+      const cachedProfile = userProfile ?? await getItem<UserProfile>(STORAGE_KEYS.USER_PROFILE);
+      const computed = computeState(null, cachedProfile, globalTrialDays);
+      set({ ...computed, isLoading: false });
+    } catch {
+      set({ isLoading: false });
+    }
   },
 }));
