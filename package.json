@@ -12,10 +12,9 @@
     "test:watch": "jest --watch",
     "test:report": "node -e \"require('fs').mkdirSync('test-results',{recursive:true})\" && jest --json --outputFile=test-results/results.json",
     "test:coverage": "jest --coverage",
-    "test:db": "SUPABASE_PROJECT_ID=reiirfhljlepxiibojzh SUPABASE_ACCESS_TOKEN=sbp_9cd410f8f10666b73c0157f42448f8df9e9550f4 jest --testPathPattern=db",
+    "test:db": "jest --testPathPattern=db",
     "test:audio-regression": "node scripts/audio-regression/run.mjs",
-    "test:anti-howling": "node scripts/audio-regression/run.mjs",
-    "postinstall": "patch-package || (cd node_modules/react-native-audio-api && patch -p1 -i ../../patches/react-native-audio-api+0.11.5.patch) || true"
+    "postinstall": "patch-package || (cd node_modules/react-native-audio-api && patch -p3 -i ../../patches/react-native-audio-api+0.11.5.patch) || true"
   },
   "dependencies": {
     "@react-native-community/netinfo": "^11.4.1",

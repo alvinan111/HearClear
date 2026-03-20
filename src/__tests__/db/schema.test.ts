@@ -6,9 +6,9 @@
  * 无 Token 时自动跳过（不计入失败）。
  */
 
-const PROJECT_ID = process.env.SUPABASE_PROJECT_ID ?? 'reiirfhljlepxiibojzh';
+const PROJECT_ID = process.env.SUPABASE_PROJECT_ID ?? '';
 const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN ?? '';
-const SKIP = !ACCESS_TOKEN;
+const SKIP = !ACCESS_TOKEN || !PROJECT_ID;
 
 const itOrSkip = SKIP ? it.skip : it;
 
@@ -46,7 +46,7 @@ const EXPECTED_TABLES = [
 
 describe('数据库 Schema 验证', () => {
   if (SKIP) {
-    it('⚠️ SUPABASE_ACCESS_TOKEN 未设置，跳过所有 DB 测试（使用 npm run test:db 运行）', () => {
+    it('⚠️ SUPABASE_PROJECT_ID 或 SUPABASE_ACCESS_TOKEN 未设置，跳过所有 DB 测试（见 README 运行 test:db）', () => {
       expect(true).toBe(true);
     });
     return;

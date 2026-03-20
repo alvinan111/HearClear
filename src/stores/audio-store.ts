@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import { HeadphoneMode, AUDIO_CONFIG } from '@config/audio';
-import type { AudioParams, AudioEngineStatus, AudioError } from '@types/audio';
+import type { AudioParams, AudioEngineStatus, AudioError } from '@/types/audio';
 import {
   DEFAULT_FEEDBACK_CORRECTION,
   isAudiogram,
   isPrescription,
   isFeedbackCorrection,
-} from '@types/audiogram';
+} from '@/types/audiogram';
 import { getItem } from '@utils/storage';
 import { STORAGE_KEYS } from '@constants/trial';
 
