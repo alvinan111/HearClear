@@ -5,9 +5,9 @@ node_modules/
 
 # Next.js build output
 admin/.next/
+admin/.vercel/
 admin/node_modules/
 admin/next-env.d.ts
-admin/package-lock.json
 
 # Expo
 .expo/
@@ -27,6 +27,7 @@ ios/
 
 # Build
 build/
+venv/
 .venv-audio-test/
 .venv*/
 
@@ -38,12 +39,13 @@ build/
 .env.production.local
 
 # Logs
-logs/
+/logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # Editor
+.cursor/
 .DS_Store
 *.suo
 *.ntvs*
