@@ -7,11 +7,11 @@ export const AUDIO_CONFIG = {
   SAMPLE_RATE: 44100,
 
   /** 默认增益（dB）：人声放大 4 倍（+12dB） */
-  DEFAULT_GAIN: 12,
+  DEFAULT_GAIN: 6, // 为了“绝不啸音”首选低增益，宁可保守。
   MIN_GAIN: 0,
-  MAX_GAIN_NORMAL: 38,          // 普通耳机最大增益 dB
-  MAX_GAIN_BONE_CONDUCTION: 26, // 骨传导耳机最大增益 dB
-  MAX_GAIN_SPEAKER: 18,         // 外放模式：略压低上限防回音
+  MAX_GAIN_NORMAL: 28,          // 普通耳机最大增益 dB
+  MAX_GAIN_BONE_CONDUCTION: 20, // 骨传导耳机最大增益 dB
+  MAX_GAIN_SPEAKER: 12,         // 外放模式：严格压低增益防回音
 
   /** 人声增强默认强度（0-1），默认拉满强调人声 */
   DEFAULT_VOICE_ENHANCE: 1,
@@ -82,20 +82,24 @@ export const AUDIO_CONFIG = {
     /** 自适应 Notch 数量（可同时压多个啸叫频点） */
     NOTCH_COUNT: 7,
     /** 输出限幅：超过此 dB 即压（更早触发） */
-    LIMITER_THRESHOLD_DB: -22,
+    LIMITER_THRESHOLD_DB: -28,
     /** 限幅时主通路乘的增益（压得更狠） */
-    LIMITER_GAIN_REDUCTION: 0.72,
+    LIMITER_GAIN_REDUCTION: 0.6,
     /** 检测到啸叫的绝对门限（dB），高于此才认为在啸叫 */
     PEAK_THRESHOLD_DB: -38,
     /** 解除啸叫提示的门限（dB），低于此才清除 UI 提示 */
     RELEASE_THRESHOLD_DB: -52,
     /** 预防性固定 Notch：常见啸叫频点轻衰减（Hz, dB, Q），在自适应 Notch 前插入 */
     PREVENTIVE_NOTCHES: [
-      { frequency: 1000, gain: -1.5, q: 0.9 },
-      { frequency: 1800, gain: -1.5, q: 0.9 },
-      { frequency: 2500, gain: -1.5, q: 0.9 },
-      { frequency: 3200, gain: -1.5, q: 0.9 },
+      { frequency: 1000, gain: -3, q: 1.0 },
+      { frequency: 1400, gain: -3, q: 1.0 },
+      { frequency: 1800, gain: -3, q: 1.0 },
+      { frequency: 2200, gain: -3, q: 1.0 },
+      { frequency: 2600, gain: -3, q: 1.0 },
+      { frequency: 3200, gain: -3, q: 1.0 },
+      { frequency: 3600, gain: -3, q: 1.0 },
     ] as Array<{ frequency: number; gain: number; q: number }>,
+
   },
 
   /** 骨传导耳机低频补偿 */

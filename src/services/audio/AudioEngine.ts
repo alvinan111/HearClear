@@ -374,17 +374,25 @@ export const AudioEngine = {
       state.voiceBuf = new Float32Array(voiceA.frequencyBinCount);
 
       // ── 固定抑啸：多频点 Notch 压低易啸频段 + 输出限幅（外放更严，不能有一点回音）────
-      const FIXED_NOTCH_FREQS = [1800, 2200, 2600, 3200];
+      // 最高级安全模式：强制“绝不啸音”。
+      // 1) 增加常见啸叫频点覆盖；
+      // 2) notch Q 提高，使窄带更深；
+      // 3) 限幅更激进（spotting 潜在反馈波增益）。
+      const FIXED_NOTCH_FREQS = [1400, 1800, 2200, 2600, 3200, 3600];
       const fixedNotches: BiquadFilterNode[] = FIXED_NOTCH_FREQS.map((freq) => {
         const n = ctx.createBiquadFilter();
         n.type = 'notch';
         n.frequency.value = freq;
-        n.Q.value = 3.2;
+        n.Q.value = 6.0; // 更窄更深
         return n;
       });
       const outputLimiter: GainNode = ctx.createGain();
-      // 外放易回音→啸叫，严格限幅；耳机可略放宽以保音量
-      outputLimiter.gain.value = preset.useSpeaker ? 0.7 : 0.88;
+      // 外放易回音→啸叫，严格限幅；耳机也更安全（优先防啸音，牺牲一点响度）
+      outputLimiter.gain.value = preset.useSpeaker ? 0.65 : 0.8;
+
+      // 额外安全链：再一档输出限制，避免边缘情况
+      const emergencyLimiter: GainNode = ctx.createGain();
+      emergencyLimiter.gain.value = preset.useSpeaker ? 0.6 : 0.75;
 
       // ── 输出静音节点：无耳机时置 0，只采集不输出 ─────────────────────────
       const outputMuteGain: GainNode = ctx.createGain();
@@ -412,7 +420,8 @@ export const AudioEngine = {
         prev = n as unknown as AudioNode;
       }
       (prev as AudioNode).connect(outputLimiter as unknown as AudioNode);
-      (outputLimiter as unknown as AudioNode).connect(outputMuteGain as unknown as AudioNode);
+      (outputLimiter as unknown as AudioNode).connect(emergencyLimiter as unknown as AudioNode);
+      (emergencyLimiter as unknown as AudioNode).connect(outputMuteGain as unknown as AudioNode);
       (outputMuteGain as unknown as AudioNode).connect(ctx.destination as unknown as AudioNode);
 
       // ── 恢复 AudioContext（部分平台默认 suspended，不 resume 无音频）────

@@ -17,6 +17,18 @@ describe('AUDIO_CONFIG 基础值', () => {
     expect(AUDIO_CONFIG.MAX_GAIN_BONE_CONDUCTION).toBeGreaterThan(AUDIO_CONFIG.MAX_GAIN_SPEAKER);
   });
 
+  it('AUDIO_CONFIG.DEFAULT_GAIN 不可过高（防止反馈爆炸）', () => {
+    expect(AUDIO_CONFIG.DEFAULT_GAIN).toBeLessThanOrEqual(10);
+  });
+
+  it('FEEDBACK_SUPPRESSOR 预防性 Notch 趋于安全', () => {
+    expect(AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.PREVENTIVE_NOTCHES.length).toBeGreaterThanOrEqual(5);
+    for (const n of AUDIO_CONFIG.FEEDBACK_SUPPRESSOR.PREVENTIVE_NOTCHES) {
+      expect(n.gain).toBeLessThanOrEqual(-2);
+      expect(n.q).toBeGreaterThanOrEqual(0.8);
+    }
+  });
+
   it('DEFAULT_VOICE_ENHANCE 在 [0, 1] 范围', () => {
     expect(AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE).toBeGreaterThanOrEqual(0);
     expect(AUDIO_CONFIG.DEFAULT_VOICE_ENHANCE).toBeLessThanOrEqual(1);

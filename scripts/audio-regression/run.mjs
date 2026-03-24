@@ -10,6 +10,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 import wavefile from 'wavefile';
 const WaveFile = wavefile.WaveFile || wavefile.default?.WaveFile || wavefile;
 
@@ -18,7 +19,31 @@ const ROOT = path.resolve(__dirname, '../..');
 const REGRESSION_DIR = path.join(ROOT, 'test-data', 'audio-regression');
 const SAMPLES_DIR = path.join(REGRESSION_DIR, 'samples');
 const REPORTS_DIR = path.join(REGRESSION_DIR, 'reports');
+const OUTPUTS_DIR = path.join(REGRESSION_DIR, 'outputs');
 const RNNOISE_SR = 48000;
+
+function loadWav(filePath) {
+  const buf = fs.readFileSync(filePath);
+  const wav = new WaveFile(buf);
+  wav.toBitDepth('32f');
+  const samples = wav.getSamples();
+  const ch = Array.isArray(samples) ? samples[0] : samples;
+  const sampleRate = wav.fmt.sampleRate || SR;
+  return { samples: Float32Array.from(ch), sampleRate };
+}
+
+/** 可选 GTCRN：默认启用 */
+function getGtcrnProcessor() {
+  try {
+    const scriptPath = path.join(ROOT, 'apply_gtcrn.py');
+    if (!fs.existsSync(scriptPath)) return null;
+    return (inputPath, outputPath) => {
+      execSync(`python3 ${scriptPath} "${inputPath}" "${outputPath}"`, { stdio: 'inherit' });
+    };
+  } catch {
+    return null;
+  }
+}
 
 /** 可选 RNNoise：需安装 rnnoise-nodejs 且 USE_RNNOISE=1 时启用；suppress 使用 16bit 48kHz 单声道 RAW */
 function getRnnoiseSuppress() {
@@ -55,14 +80,26 @@ const EQ_BANDS = [
   { type: 'highshelf', frequency: 8000, gain: -6, q: 1.0 },
 ];
 
-function loadWav(filePath) {
-  const buf = fs.readFileSync(filePath);
-  const wav = new WaveFile(buf);
-  wav.toBitDepth('32f');
-  const samples = wav.getSamples();
-  const ch = Array.isArray(samples) ? samples[0] : samples;
-  const sampleRate = wav.fmt.sampleRate || SR;
-  return { samples: Float32Array.from(ch), sampleRate };
+function saveWav(samples, sampleRate, filePath) {
+  const wav = new WaveFile();
+  wav.fromScratch(1, sampleRate, '32f', Array.from(samples));
+  fs.writeFileSync(filePath, wav.toBuffer());
+}
+
+function checkForHowling(filePath) {
+  try {
+    const cmd = `python3 detect_howling.py "${filePath}"`;
+    const out = execSync(cmd, { encoding: 'utf8' });
+    if (out.includes('HOWLING DETECTED')) {
+      return { hasHowling: true, detail: out.trim() };
+    }
+    return { hasHowling: false, detail: out.trim() };
+  } catch (err) {
+    // 如果检测脚本返回非0（啸叫或异常），从 stdout/stderr 提取信息
+    const message = (err.stdout || '') + (err.stderr || '');
+    const hasHowling = message.includes('HOWLING DETECTED');
+    return { hasHowling, detail: message.trim() };
+  }
 }
 
 /** 简单线性重采样 */
@@ -299,34 +336,43 @@ function main() {
     fs.mkdirSync(path.join(SAMPLES_DIR, 'clean'), { recursive: true });
   }
   if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
+  if (!fs.existsSync(OUTPUTS_DIR)) fs.mkdirSync(OUTPUTS_DIR, { recursive: true });
 
   const results = [];
   let skipped = 0;
   for (const entry of manifest) {
     const noisyPath = path.join(SAMPLES_DIR, entry.noisy);
     const cleanPath = path.join(SAMPLES_DIR, entry.clean);
+    console.log(`Checking ${entry.id}: ${noisyPath} exists: ${fs.existsSync(noisyPath)}, ${cleanPath} exists: ${fs.existsSync(cleanPath)}`);
     if (!fs.existsSync(noisyPath) || !fs.existsSync(cleanPath)) {
       results.push({ id: entry.id, status: 'skipped', reason: 'missing_file' });
       skipped++;
       continue;
     }
     try {
+      console.log(`Processing ${entry.id}`);
       const { samples: noisy, sampleRate } = loadWav(noisyPath);
       const { samples: clean } = loadWav(cleanPath);
       const processed = processOfflineImproved(noisy, sampleRate);
+      // Save processed output
+      const outputPath = path.join(OUTPUTS_DIR, `${entry.id}_processed.wav`);
+      saveWav(processed, sampleRate, outputPath);
+      console.log(`Saved processed output: ${outputPath}`);
       const corrInput = correlation(noisy, clean);
       const corrOutput = correlation(processed, clean);
       const snrInput = segmentalSnrDb(noisy, clean);
       const snrOutput = segmentalSnrDb(processed, clean);
+      const howlingResult = checkForHowling(outputPath);
       const row = {
         id: entry.id,
-        status: 'ok',
+        status: howlingResult.hasHowling ? 'fail_howling' : 'ok',
         scene: entry.scene,
         correlation_input: Math.round(corrInput * 1e4) / 1e4,
         correlation_output: Math.round(corrOutput * 1e4) / 1e4,
         seg_snr_input_db: Math.round(snrInput * 100) / 100,
         seg_snr_output_db: Math.round(snrOutput * 100) / 100,
         snr_improvement_db: Math.round((snrOutput - snrInput) * 100) / 100,
+        howling_check: howlingResult,
       };
       const rnnoiseFirst = applyRNNoiseOffline(noisy, sampleRate);
       if (rnnoiseFirst) {
@@ -334,21 +380,48 @@ function main() {
         row.correlation_output_rnnoise = Math.round(correlation(processedRnnoise, clean) * 1e4) / 1e4;
         row.snr_improvement_db_rnnoise = Math.round((segmentalSnrDb(processedRnnoise, clean) - snrInput) * 100) / 100;
       }
+
+      // GTCRN processing
+      const gtcrnProcessor = getGtcrnProcessor();
+      if (gtcrnProcessor) {
+        try {
+          console.log(`[GTCRN] Processing ${entry.id}`);
+          const gtcrnOutputPath = path.join(OUTPUTS_DIR, `${entry.id}_gtcrn.wav`);
+          gtcrnProcessor(outputPath, gtcrnOutputPath);
+          console.log(`[GTCRN] Saved ${gtcrnOutputPath}`);
+          const { samples: gtcrnProcessed } = loadWav(gtcrnOutputPath);
+          const corrGtcrn = correlation(gtcrnProcessed, clean);
+          const snrGtcrn = segmentalSnrDb(gtcrnProcessed, clean);
+          row.correlation_output_gtcrn = Math.round(corrGtcrn * 1e4) / 1e4;
+          row.snr_improvement_db_gtcrn = Math.round((snrGtcrn - snrInput) * 100) / 100;
+          console.log(`[GTCRN] ${entry.id} correlation: ${row.correlation_output_gtcrn}, SNR: ${row.snr_improvement_db_gtcrn}`);
+        } catch (e) {
+          console.warn(`[audio-regression] GTCRN failed for ${entry.id}:`, e.message);
+        }
+      }
       results.push(row);
     } catch (e) {
-      results.push({ id: entry.id, status: 'error', reason: e.message });
+      console.error(`[audio-regression] entry ${entry.id} error:`, e);
+      results.push({ id: entry.id, status: 'error', reason: e.message || String(e) });
       skipped++;
     }
   }
 
   const okResults = results.filter(r => r.status === 'ok');
-  const avgCorrOut = okResults.length ? okResults.reduce((s, r) => s + r.correlation_output, 0) / okResults.length : 0;
-  const avgSnrImprove = okResults.length ? okResults.reduce((s, r) => s + r.snr_improvement_db, 0) / okResults.length : 0;
+  const allResults = results.filter(r => r.correlation_output != null);
+  const avgCorrOut = allResults.length ? allResults.reduce((s, r) => s + r.correlation_output, 0) / allResults.length : 0;
+  const avgSnrImprove = allResults.length ? allResults.reduce((s, r) => s + r.snr_improvement_db, 0) / allResults.length : 0;
   const rnnoiseResults = okResults.filter(r => r.correlation_output_rnnoise != null);
   const avgCorrOutRnnoise = rnnoiseResults.length
     ? rnnoiseResults.reduce((s, r) => s + r.correlation_output_rnnoise, 0) / rnnoiseResults.length : null;
   const avgSnrImproveRnnoise = rnnoiseResults.length
     ? rnnoiseResults.reduce((s, r) => s + r.snr_improvement_db_rnnoise, 0) / rnnoiseResults.length : null;
+
+  const gtcrnResults = allResults.filter(r => r.correlation_output_gtcrn != null);
+  const avgCorrOutGtcrn = gtcrnResults.length
+    ? gtcrnResults.reduce((s, r) => s + r.correlation_output_gtcrn, 0) / gtcrnResults.length : null;
+  const avgSnrImproveGtcrn = gtcrnResults.length
+    ? gtcrnResults.reduce((s, r) => s + r.snr_improvement_db_gtcrn, 0) / gtcrnResults.length : null;
 
   const report = {
     timestamp: new Date().toISOString(),
@@ -363,6 +436,10 @@ function main() {
         avg_correlation_output_rnnoise: Math.round(avgCorrOutRnnoise * 1e4) / 1e4,
         avg_snr_improvement_db_rnnoise: Math.round(avgSnrImproveRnnoise * 100) / 100,
       }),
+      ...(avgCorrOutGtcrn != null && {
+        avg_correlation_output_gtcrn: Math.round(avgCorrOutGtcrn * 1e4) / 1e4,
+        avg_snr_improvement_db_gtcrn: Math.round(avgSnrImproveGtcrn * 100) / 100,
+      }),
     },
     results,
   };
@@ -370,6 +447,12 @@ function main() {
   const reportName = `report-${report.timestamp.replace(/[:.]/g, '-').slice(0, 19)}.json`;
   const reportPath = path.join(REPORTS_DIR, reportName);
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
+
+  const hasHowlingFailure = results.some(r => r.status === 'fail_howling');
+  if (hasHowlingFailure) {
+    const fails = results.filter(r => r.status === 'fail_howling').map(r => `${r.id}:${r.howling_check.detail.replace(/\s+/g, ' ')}`);
+    console.error('[audio-regression] WARNING: howling detected in processed outputs:', fails.join(' | '));
+  }
 
   console.log('[audio-regression] total:', manifest.length, '| ran:', okResults.length, '| skipped:', skipped);
   console.log('[audio-regression] avg_correlation_output:', report.summary.avg_correlation_output);
@@ -379,6 +462,11 @@ function main() {
     console.log('[audio-regression] avg_snr_improvement_db_rnnoise:', report.summary.avg_snr_improvement_db_rnnoise);
   }
   console.log('[audio-regression] report:', reportPath);
+
+  if (hasHowlingFailure) {
+    console.error('[audio-regression] FAILED: 绝对不允许出现啸音，检测到处理后啸叫。');
+    process.exit(1);
+  }
 }
 
 main();
