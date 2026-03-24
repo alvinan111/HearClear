@@ -10,7 +10,7 @@ import {
   isAudiogram,
   isPrescription,
   isFeedbackCorrection,
-} from '@types/audiogram';
+} from '@/types/audiogram';
 
 describe('AUDIOGRAM_FREQUENCIES / PRESCRIPTION_BAND_FREQS', () => {
   it('测听频率为 6 个', () => {

@@ -1,7 +1,7 @@
 /**
  * 认证类型：LoginMethod、UserProfile 必需字段
  */
-import type { LoginMethod, UserProfile, LoginCredentials } from '@types/auth';
+import type { LoginMethod, UserProfile, LoginCredentials } from '@/types/auth';
 
 describe('LoginMethod', () => {
   const validMethods: LoginMethod[] = ['phone', 'email'];

@@ -11,6 +11,7 @@
 import { Platform, AppState, type AppStateStatus } from 'react-native';
 import Constants from 'expo-constants';
 import { setAudioModeAsync } from 'expo-audio';
+import { reportError } from '@utils/error-report';
 
 // ─── 是否运行在 Expo Go（不支持通知保活） ────────────────────────────────────
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -36,13 +37,14 @@ export async function initBackgroundService(): Promise<void> {
 
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowAlert: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
         shouldPlaySound: false,
         shouldSetBadge: false,
       }),
     });
-  } catch {
-    // 忽略 Expo Go 中的加载失败
+  } catch (e) {
+    reportError('background.initService', e);
   }
 }
 
@@ -66,10 +68,13 @@ export async function startBackgroundAudio(): Promise<void> {
   // expo-audio 新 API 设置音频模式
   await setAudioModeAsync({
     playsInSilentMode: true,           // iOS 静音键不影响
-    shouldDuckAndroid: false,
     allowsRecording: true,
     interruptionMode: 'mixWithOthers', // 与其他音频共存
-  }).catch(() => {});
+    shouldPlayInBackground: true,
+    shouldRouteThroughEarpiece: false,
+  }).catch((e) => {
+    reportError('background.start.setAudioMode', e);
+  });
 
   // Android Dev Build：发布持久前台通知
   if (!isExpoGo && Platform.OS === 'android') {
@@ -92,8 +97,8 @@ export async function startBackgroundAudio(): Promise<void> {
         } as import('expo-notifications').NotificationContentInput,
         trigger: null,
       });
-    } catch {
-      // 通知发布失败不影响音频运行
+    } catch (e) {
+      reportError('background.start.scheduleNotification', e);
     }
   }
 
@@ -107,10 +112,13 @@ export async function stopBackgroundAudio(): Promise<void> {
   // 恢复普通音频模式
   await setAudioModeAsync({
     playsInSilentMode: false,
-    shouldDuckAndroid: true,
     allowsRecording: false,
     interruptionMode: 'doNotMix',
-  }).catch(() => {});
+    shouldPlayInBackground: false,
+    shouldRouteThroughEarpiece: false,
+  }).catch((e) => {
+    reportError('background.stop.setAudioMode', e);
+  });
 
   // 撤销 Android 通知
   if (!isExpoGo && Platform.OS === 'android') {
@@ -118,7 +126,9 @@ export async function stopBackgroundAudio(): Promise<void> {
       const Notifications = await import('expo-notifications');
       await Notifications.dismissNotificationAsync(NOTIFICATION_ID);
       await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_ID);
-    } catch { /* 忽略 */ }
+    } catch (e) {
+      reportError('background.stop.dismissNotification', e);
+    }
   }
 
   appStateSubscription?.remove();
@@ -134,7 +144,13 @@ function handleAppStateChange(nextState: AppStateStatus): void {
   import('expo-notifications').then((Notifications) => {
     Notifications.getPresentedNotificationsAsync().then((list) => {
       const exists = list.some((n) => n.request.identifier === NOTIFICATION_ID);
-      if (!exists) startBackgroundAudio().catch(() => {});
+      if (!exists) {
+        startBackgroundAudio().catch((e) => {
+          reportError('background.appState.restartBackgroundAudio', e);
+        });
+      }
     });
-  }).catch(() => {});
+  }).catch((e) => {
+    reportError('background.appState.importNotifications', e);
+  });
 }

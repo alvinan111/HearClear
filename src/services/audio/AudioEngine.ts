@@ -14,15 +14,15 @@
  */
 
 import { AUDIO_CONFIG, AUDIO_PRESETS, HeadphoneMode } from '@config/audio';
-import type { AudioParams, AudioError } from '@types/audio';
+import type { AudioParams, AudioError } from '@/types/audio';
 import { useAudioStore } from '@stores/audio-store';
 import { clampGainForPreset, dbToLinear as dbToLinearUtil } from '@services/audio/audioUtils';
-import { PRESCRIPTION_BAND_FREQS } from '@types/audiogram';
+import { PRESCRIPTION_BAND_FREQS } from '@/types/audiogram';
 
 // ─── Native 模块动态加载 ──────────────────────────────────────────────────────
 let AudioContextClass: (new (options?: { sampleRate?: number }) => import('react-native-audio-api').AudioContext) | null = null;
 let AudioRecorderClass: (new () => import('react-native-audio-api').AudioRecorder) | null = null;
-let AudioManager: import('react-native-audio-api').default | null = null;
+let AudioManager: import('react-native-audio-api').IAudioManager | null = null;
 let isNativeAvailable = false;
 
 try {
@@ -551,4 +551,3 @@ function extractBars(
   }
   return bars;
 }
-

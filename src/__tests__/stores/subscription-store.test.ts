@@ -8,8 +8,8 @@ jest.mock('@utils/storage');
 import { useSubscriptionStore } from '@stores/subscription-store';
 import * as api from '@services/api';
 import * as storage from '@utils/storage';
-import type { UserProfile } from '@types/auth';
-import type { Subscription } from '@types/subscription';
+import type { UserProfile } from '@/types/auth';
+import type { Subscription } from '@/types/subscription';
 import { TRIAL_DEFAULTS } from '@constants/trial';
 
 const mockApi = api as jest.Mocked<typeof api>;
@@ -23,6 +23,7 @@ const past   = new Date(now.getTime() - 1 * 86400_000).toISOString();
 const makeProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
   id: 'user-001',
   phone: '+8613800000001',
+  email: null,
   nickname: null,
   avatarUrl: null,
   firstUseAt: threeDaysAgo,

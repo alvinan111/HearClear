@@ -6,13 +6,14 @@ jest.mock('@services/auth');
 
 import { useAuthStore } from '@stores/auth-store';
 import * as authService from '@services/auth';
-import type { UserProfile } from '@types/auth';
+import type { UserProfile } from '@/types/auth';
 
 const mockAuthService = authService as jest.Mocked<typeof authService>;
 
 const mockUser: UserProfile = {
   id: 'user-001',
   phone: '+8613800000001',
+  email: null,
   nickname: '测试用户',
   avatarUrl: null,
   firstUseAt: new Date().toISOString(),

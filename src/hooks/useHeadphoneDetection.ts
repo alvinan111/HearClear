@@ -17,7 +17,7 @@ import {
   DeviceEventEmitter,
 } from 'react-native';
 
-let AudioManager: import('react-native-audio-api').default | null = null;
+let AudioManager: import('react-native-audio-api').IAudioManager | null = null;
 try {
   const api = require('react-native-audio-api');
   AudioManager = api.AudioManager;

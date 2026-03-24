@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
+import { useShallow } from 'zustand/react/shallow';
 import Constants from 'expo-constants';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useAuthStore } from '@stores/auth-store';
 import { useSubscriptionStore } from '@stores/subscription-store';
 import { useSettingsStore } from '@stores/settings-store';
@@ -20,27 +30,73 @@ import { useAudioStore } from '@stores/audio-store';
 import { submitFeedback } from '@services/api';
 import { formatRemainingDays } from '@utils/date';
 import type { SupportedLanguage } from '@i18n/index';
+import { ScreenBackdrop } from '@components/ui/ScreenBackdrop';
+import { TiltShell } from '@components/ui/TiltShell';
 import {
   COLORS, FONT_SIZE, FONT_WEIGHT, SPACING,
   BORDER_RADIUS, TOUCH_TARGET, SHADOW,
 } from '@constants/theme';
 
 export default function SettingsScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
 
-  const { user, isAuthenticated, logout, isLoading: authLoading } = useAuthStore();
-  const { subscription, isPaid, isUnlimited, isInTrial, trialDaysRemaining } = useSubscriptionStore();
-  const { language, setLanguage } = useSettingsStore();
-  const { params, updateParams, resetParams, configLocked } = useAudioStore();
+  const { user, isAuthenticated, logout, authLoading } = useAuthStore(
+    useShallow((s) => ({
+      user: s.user,
+      isAuthenticated: s.isAuthenticated,
+      logout: s.logout,
+      authLoading: s.isLoading,
+    }))
+  );
+  const { subscription, isPaid, isUnlimited, isInTrial, trialDaysRemaining } = useSubscriptionStore(
+    useShallow((s) => ({
+      subscription: s.subscription,
+      isPaid: s.isPaid,
+      isUnlimited: s.isUnlimited,
+      isInTrial: s.isInTrial,
+      trialDaysRemaining: s.trialDaysRemaining,
+    }))
+  );
+  const { language, setLanguage } = useSettingsStore(
+    useShallow((s) => ({ language: s.language, setLanguage: s.setLanguage }))
+  );
+  const { params, updateParams, resetParams, configLocked } = useAudioStore(
+    useShallow((s) => ({
+      params: s.params,
+      updateParams: s.updateParams,
+      resetParams: s.resetParams,
+      configLocked: s.configLocked,
+    }))
+  );
 
   const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'complaint' | 'other'>('bug');
   const [feedbackContent, setFeedbackContent] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const heroEnter = useSharedValue(0);
+  const badgePhase = useSharedValue(0);
 
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const isZh = language === 'zh';
+
+  useEffect(() => {
+    heroEnter.value = withTiming(1, { duration: 760, easing: Easing.out(Easing.cubic) });
+    badgePhase.value = withRepeat(withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [badgePhase, heroEnter]);
+
+  const heroCardStyle = useAnimatedStyle(() => ({
+    opacity: heroEnter.value,
+    transform: [
+      { translateY: interpolate(heroEnter.value, [0, 1], [28, 0]) },
+      { scale: interpolate(heroEnter.value, [0, 1], [0.98, 1]) },
+    ],
+  }));
+
+  const badgeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(badgePhase.value, [0, 1], [0.86, 1]),
+    transform: [{ scale: interpolate(badgePhase.value, [0, 1], [1, 1.04]) }],
+  }));
 
   function handleResetParams() {
     Alert.alert(
@@ -91,8 +147,45 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <ScreenBackdrop />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>{t('settings.title')}</Text>
+        <Animated.View style={heroCardStyle}>
+          <TiltShell
+            accent={isPaid ? COLORS.success : configLocked ? COLORS.warning : COLORS.primary}
+            depth="hero"
+            radius={BORDER_RADIUS.xl}
+            style={styles.heroShell}
+          >
+            <View style={styles.heroCard}>
+              <View style={styles.heroTopRow}>
+                <Animated.View style={[styles.heroBadge, badgeStyle]}>
+                  <Text style={styles.heroBadgeText}>CONTROL DECK</Text>
+                </Animated.View>
+                <View style={styles.heroVersionChip}>
+                  <Text style={styles.heroVersionText}>v{version}</Text>
+                </View>
+              </View>
+              <Text style={styles.pageTitle}>{t('settings.title')}</Text>
+              <Text style={styles.heroSubtitle}>
+                在这里微调助听参数、会员状态与反馈通道，让整套听感曲线更贴近你的日常环境。
+              </Text>
+              <View style={styles.heroChips}>
+                <View style={[styles.heroChip, isPaid ? styles.heroChipSuccess : styles.heroChipMuted]}>
+                  <Text style={styles.heroChipLabel}>MEMBERSHIP</Text>
+                  <Text style={styles.heroChipValue}>{getMemberStatusLabel()}</Text>
+                </View>
+                <View style={styles.heroChip}>
+                  <Text style={styles.heroChipLabel}>LANGUAGE</Text>
+                  <Text style={styles.heroChipValue}>{language === 'zh' ? '中文' : 'English'}</Text>
+                </View>
+                <View style={[styles.heroChip, configLocked ? styles.heroChipWarning : styles.heroChipSuccess]}>
+                  <Text style={styles.heroChipLabel}>PROFILE</Text>
+                  <Text style={styles.heroChipValue}>{configLocked ? 'LOCKED' : 'LIVE'}</Text>
+                </View>
+              </View>
+            </View>
+          </TiltShell>
+        </Animated.View>
 
         {/* ── 会员状态 ── */}
         <SectionCard title={t('settings.membership.title')}>
@@ -206,7 +299,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.audioParamRow, { marginTop: SPACING.md }]}
-            onPress={() => router.push('/hearing-test')}
+            onPress={() => router.push('/hearing-test' as Href)}
           >
             <Text style={styles.audioParamLabel}>👂 {t('hearingTest.title')}</Text>
             <Text style={styles.audioParamValue}>→</Text>
@@ -308,20 +401,50 @@ export default function SettingsScreen() {
 }
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  const reveal = useSharedValue(0);
+  const glow = useSharedValue(0);
+
+  useEffect(() => {
+    reveal.value = withTiming(1, { duration: 640, easing: Easing.out(Easing.cubic) });
+    glow.value = withRepeat(withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [glow, reveal]);
+
+  const sectionStyle = useAnimatedStyle(() => ({
+    opacity: reveal.value,
+    transform: [{ translateY: interpolate(reveal.value, [0, 1], [18, 0]) }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(glow.value, [0, 1], [0.28, 0.72]),
+    transform: [{ scale: interpolate(glow.value, [0, 1], [0.98, 1.02]) }],
+  }));
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionCard}>{children}</View>
+      <Animated.View style={sectionStyle}>
+        <TiltShell accent={COLORS.primary} radius={BORDER_RADIUS.xl}>
+          <Animated.View style={[styles.sectionGlow, glowStyle]}>
+            <LinearGradient
+              colors={['rgba(107,231,255,0.14)', 'rgba(46,240,181,0.05)', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+          <View style={styles.sectionCard}>{children}</View>
+        </TiltShell>
+      </Animated.View>
     </View>
   );
 }
 
-function LegalLink({ label, href }: { label: string; href: string }) {
+function LegalLink({ label, href }: { label: string; href: Href }) {
   const router = useRouter();
   return (
     <TouchableOpacity
       style={styles.legalLink}
-      onPress={() => router.push(href as any)}
+      onPress={() => router.push(href)}
       activeOpacity={0.7}
     >
       <Text style={styles.legalLinkText}>{label}</Text>
@@ -332,25 +455,125 @@ function LegalLink({ label, href }: { label: string; href: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.backgroundSecondary },
-  content: { padding: SPACING.lg },
-  pageTitle: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
+  content: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
+  heroShell: {
     marginBottom: SPACING.xl,
+  },
+  heroCard: {
+    backgroundColor: COLORS.surfaceGlass,
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
+    overflow: 'hidden',
+    ...SHADOW.md,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  heroBadge: {
+    borderWidth: 1,
+    borderColor: COLORS.borderStrong,
+    backgroundColor: COLORS.primaryDim,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  heroBadgeText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: FONT_WEIGHT.bold,
+    letterSpacing: 2.4,
+  },
+  heroVersionChip: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  heroVersionText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    fontWeight: FONT_WEIGHT.semibold,
+    letterSpacing: 1.4,
+  },
+  pageTitle: {
+    fontSize: FONT_SIZE.xxxl,
+    fontWeight: FONT_WEIGHT.black,
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+    letterSpacing: 0.5,
+  },
+  heroSubtitle: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+    lineHeight: 24,
+    marginBottom: SPACING.lg,
+    maxWidth: 330,
+  },
+  heroChips: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  heroChip: {
+    flex: 1,
+    backgroundColor: 'rgba(9,17,33,0.7)',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  heroChipMuted: {
+    borderColor: COLORS.border,
+  },
+  heroChipSuccess: {
+    borderColor: 'rgba(46,240,181,0.35)',
+    backgroundColor: 'rgba(46,240,181,0.08)',
+  },
+  heroChipWarning: {
+    borderColor: 'rgba(255,190,92,0.35)',
+    backgroundColor: 'rgba(255,190,92,0.08)',
+  },
+  heroChipLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textMuted,
+    letterSpacing: 1.8,
+    marginBottom: 2,
+  },
+  heroChipValue: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.semibold,
   },
   section: { marginBottom: SPACING.xl },
   sectionTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.textMuted,
     marginBottom: SPACING.sm,
     paddingLeft: SPACING.sm,
+    letterSpacing: 2.4,
+  },
+  sectionGlow: {
+    position: 'absolute',
+    left: -10,
+    right: -10,
+    top: -10,
+    bottom: -10,
+    borderRadius: BORDER_RADIUS.xl,
   },
   sectionCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.surfaceGlass,
+    borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     ...SHADOW.sm,
   },
   memberRow: {
@@ -371,10 +594,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   upgradeBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryDark,
     borderRadius: BORDER_RADIUS.full,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
+    ...SHADOW.sm,
   },
   upgradeBtnText: {
     fontSize: FONT_SIZE.sm,
@@ -382,12 +606,13 @@ const styles = StyleSheet.create({
     color: COLORS.textInverse,
   },
   loginBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryDark,
     borderRadius: BORDER_RADIUS.md,
     height: TOUCH_TARGET.button,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: SPACING.md,
+    ...SHADOW.sm,
   },
   loginBtnText: {
     fontSize: FONT_SIZE.lg,
@@ -417,7 +642,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.sm + 2,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
@@ -466,6 +691,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
+    backgroundColor: 'rgba(255,255,255,0.02)',
   },
   feedbackTypeBtnSelected: {
     borderColor: COLORS.primary,
@@ -478,11 +704,11 @@ const styles = StyleSheet.create({
   feedbackInput: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
     fontSize: FONT_SIZE.md,
     color: COLORS.text,
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(5,9,20,0.5)',
     minHeight: 100,
     marginBottom: SPACING.md,
   },
@@ -508,8 +734,9 @@ const styles = StyleSheet.create({
     height: TOUCH_TARGET.button,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryDark,
     borderRadius: BORDER_RADIUS.md,
+    ...SHADOW.sm,
   },
   feedbackSubmitBtnText: {
     fontSize: FONT_SIZE.lg,

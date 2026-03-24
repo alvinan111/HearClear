@@ -1,5 +1,5 @@
 import { HeadphoneMode } from '@config/audio';
-import type { Audiogram, Prescription, FeedbackCorrection } from '@types/audiogram';
+import type { Audiogram, Prescription, FeedbackCorrection } from '@/types/audiogram';
 
 /** 使用场景：默认 / TV 拾音（手机放电视旁） */
 export type AudioScene = 'default' | 'tv';

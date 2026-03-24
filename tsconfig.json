@@ -24,9 +24,6 @@
       "@config/*": [
         "src/config/*"
       ],
-      "@types/*": [
-        "src/types/*"
-      ],
       "@utils/*": [
         "src/utils/*"
       ],
@@ -44,5 +41,15 @@
     ".expo/types/**/*.d.ts",
     "expo-env.d.ts",
     ".expo/types/**/*.ts"
+  ],
+  "exclude": [
+    "admin",
+    "node_modules",
+    ".expo",
+    "android",
+    "ios",
+    "packages",
+    "coverage",
+    "test-results"
   ]
 }

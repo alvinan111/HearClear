@@ -4,8 +4,8 @@
  */
 
 import { supabase } from './supabase';
-import type { AppConfig, AppVersion } from '@types/config';
-import type { Subscription } from '@types/subscription';
+import type { AppConfig, AppVersion } from '@/types/config';
+import type { Subscription } from '@/types/subscription';
 
 /** 拉取全局远程配置 */
 export async function fetchAppConfig(): Promise<AppConfig | null> {

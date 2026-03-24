@@ -1,7 +1,7 @@
 /**
  * 音频类型：AudioParams、AudioScene、AudioError 等
  */
-import type { AudioParams, AudioScene, AudioError, AudioEngineStatus } from '@types/audio';
+import type { AudioParams, AudioScene, AudioError, AudioEngineStatus } from '@/types/audio';
 import { HeadphoneMode } from '@config/audio';
 
 describe('AudioParams', () => {

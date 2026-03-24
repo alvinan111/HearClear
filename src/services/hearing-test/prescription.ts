@@ -3,9 +3,9 @@
  * G(f) = k * HL(f)，k ≈ 0.4–0.5；6 点插值到 7 个 EQ 频带
  */
 
-import type { Audiogram, Prescription } from '@types/audiogram';
-import { PRESCRIPTION_BAND_FREQS } from '@types/audiogram';
-import { AUDIOGRAM_FREQUENCIES } from '@types/audiogram';
+import type { Audiogram, Prescription } from '@/types/audiogram';
+import { PRESCRIPTION_BAND_FREQS } from '@/types/audiogram';
+import { AUDIOGRAM_FREQUENCIES } from '@/types/audiogram';
 
 /** 半增益系数，0.4–0.5 */
 const HALF_GAIN_K = 0.45;

@@ -3,8 +3,8 @@
  * 使用 react-native-audio-api 的 AudioContext.createOscillator() + GainNode 播放纯音
  */
 
-import type { Audiogram, AudiogramFrequency } from '@types/audiogram';
-import { AUDIOGRAM_FREQUENCIES, createEmptyAudiogram } from '@types/audiogram';
+import type { Audiogram, AudiogramFrequency } from '@/types/audiogram';
+import { AUDIOGRAM_FREQUENCIES, createEmptyAudiogram } from '@/types/audiogram';
 
 let AudioContextClass: (new (options?: { sampleRate?: number }) => import('react-native-audio-api').AudioContext) | null = null;
 try {

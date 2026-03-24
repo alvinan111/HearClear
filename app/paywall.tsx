@@ -12,11 +12,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useConfigStore } from '@stores/config-store';
 import { useSubscriptionStore } from '@stores/subscription-store';
 import { useAuthStore } from '@stores/auth-store';
-import type { PaymentChannel } from '@types/payment';
-import type { SubscriptionType } from '@types/subscription';
+import { ScreenBackdrop } from '@components/ui/ScreenBackdrop';
+import { TiltShell } from '@components/ui/TiltShell';
+import type { PaymentChannel } from '@/types/payment';
+import type { SubscriptionType } from '@/types/subscription';
 import {
   COLORS, FONT_SIZE, FONT_WEIGHT, SPACING,
   BORDER_RADIUS, SHADOW, TOUCH_TARGET,
@@ -40,8 +51,38 @@ export default function PaywallScreen() {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionType>(config.recommendedPlan);
   const [paymentChannel, setPaymentChannel] = useState<PaymentChannel>('alipay');
   const [isPaying, setIsPaying] = useState(false);
+  const heroEnter = useSharedValue(0);
+  const pulsePhase = useSharedValue(0);
+  const ctaSweep = useSharedValue(0);
 
   const prices = config.prices;
+
+  React.useEffect(() => {
+    heroEnter.value = withTiming(1, { duration: 760, easing: Easing.out(Easing.cubic) });
+    pulsePhase.value = withDelay(80, withRepeat(withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.sin) }), -1, true));
+    ctaSweep.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.linear }), -1, false);
+  }, [ctaSweep, heroEnter, pulsePhase]);
+
+  const heroStyle = useAnimatedStyle(() => ({
+    opacity: heroEnter.value,
+    transform: [
+      { translateY: interpolate(heroEnter.value, [0, 1], [34, 0]) },
+      { scale: interpolate(heroEnter.value, [0, 1], [0.97, 1]) },
+    ],
+  }));
+
+  const planPulseStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulsePhase.value, [0, 1], [0.18, 0.42]),
+    transform: [{ scale: interpolate(pulsePhase.value, [0, 1], [0.98, 1.02]) }],
+  }));
+
+  const ctaSweepStyle = useAnimatedStyle(() => ({
+    opacity: 0.3,
+    transform: [
+      { translateX: interpolate(ctaSweep.value, [0, 1], [-260, 260]) },
+      { rotate: '18deg' },
+    ],
+  }));
 
   async function handleSubscribe() {
     if (!isAuthenticated) {
@@ -82,6 +123,7 @@ export default function PaywallScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScreenBackdrop />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* 返回按钮 */}
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -89,41 +131,76 @@ export default function PaywallScreen() {
         </TouchableOpacity>
 
         {/* 标题 */}
-        <LinearGradient colors={['#EBF3FF', '#FFFFFF']} style={styles.headerGradient}>
-          <Text style={styles.headerIcon}>👑</Text>
-          <Text style={styles.title}>{t('paywall.title')}</Text>
-          <Text style={styles.subtitle}>{t('paywall.subtitle')}</Text>
-          {isInTrial && (
-            <View style={styles.trialBadge}>
-              <Text style={styles.trialBadgeText}>
-                {t('paywall.trialDaysLeft', { days: trialDaysRemaining })}
+        <Animated.View style={[styles.heroShell, heroStyle]}>
+          <TiltShell accent={COLORS.primary} depth="hero" radius={BORDER_RADIUS.xl}>
+            <LinearGradient
+              colors={['rgba(107,231,255,0.16)', 'rgba(46,240,181,0.07)', 'rgba(255,190,92,0.03)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroGlow}
+            />
+            <LinearGradient colors={['#0B1730', '#11203C']} style={styles.headerGradient}>
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroBadge}>
+                  <Text style={styles.heroBadgeText}>PREMIUM ACCESS</Text>
+                </View>
+                {isInTrial && (
+                  <View style={styles.trialBadge}>
+                    <Text style={styles.trialBadgeText}>
+                      {t('paywall.trialDaysLeft', { days: trialDaysRemaining })}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.headerIcon}>◈</Text>
+              <Text style={styles.title}>{t('paywall.title')}</Text>
+              <Text style={styles.subtitle}>
+                解锁更强的人声增强、更安静的环境抑制和完整离线能力，让 HearClear 进入全功率状态。
               </Text>
-            </View>
-          )}
-        </LinearGradient>
+              <View style={styles.heroMetrics}>
+                <View style={styles.heroMetric}>
+                  <Text style={styles.heroMetricLabel}>VOICE</Text>
+                  <Text style={styles.heroMetricValue}>BOOST+</Text>
+                </View>
+                <View style={styles.heroMetric}>
+                  <Text style={styles.heroMetricLabel}>ADS</Text>
+                  <Text style={styles.heroMetricValue}>OFF</Text>
+                </View>
+                <View style={styles.heroMetric}>
+                  <Text style={styles.heroMetricLabel}>MODE</Text>
+                  <Text style={styles.heroMetricValue}>PRO</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </TiltShell>
+        </Animated.View>
 
         {/* 功能对比 */}
         <View style={styles.featuresSection}>
-          <View style={styles.featureColumn}>
-            <Text style={styles.featureColumnTitle}>{t('paywall.freeFeatures')}</Text>
-            {freeFeatures.map((f) => (
-              <View key={f.key} style={styles.featureItem}>
-                <Text style={styles.featureIcon}>{f.icon}</Text>
-                <Text style={styles.featureText}>{t(`paywall.features.${f.key}`)}</Text>
-              </View>
-            ))}
-          </View>
-          <View style={styles.featureColumn}>
-            <Text style={[styles.featureColumnTitle, { color: COLORS.primary }]}>
-              {t('paywall.paidFeatures')}
-            </Text>
-            {paidFeatures.map((f) => (
-              <View key={f.key} style={styles.featureItem}>
-                <Text style={styles.featureIcon}>{f.icon}</Text>
-                <Text style={styles.featureText}>{t(`paywall.features.${f.key}`)}</Text>
-              </View>
-            ))}
-          </View>
+          <TiltShell accent={COLORS.textMuted} radius={BORDER_RADIUS.xl} style={styles.featureShell}>
+            <View style={styles.featureColumn}>
+              <Text style={styles.featureColumnTitle}>{t('paywall.freeFeatures')}</Text>
+              {freeFeatures.map((f) => (
+                <View key={f.key} style={styles.featureItem}>
+                  <Text style={styles.featureIcon}>{f.icon}</Text>
+                  <Text style={styles.featureText}>{t(`paywall.features.${f.key}`)}</Text>
+                </View>
+              ))}
+            </View>
+          </TiltShell>
+          <TiltShell accent={COLORS.primary} radius={BORDER_RADIUS.xl} style={styles.featureShell}>
+            <View style={styles.featureColumn}>
+              <Text style={[styles.featureColumnTitle, { color: COLORS.primary }]}>
+                {t('paywall.paidFeatures')}
+              </Text>
+              {paidFeatures.map((f) => (
+                <View key={f.key} style={styles.featureItem}>
+                  <Text style={styles.featureIcon}>{f.icon}</Text>
+                  <Text style={styles.featureText}>{t(`paywall.features.${f.key}`)}</Text>
+                </View>
+              ))}
+            </View>
+          </TiltShell>
         </View>
 
         {/* 方案选择 */}
@@ -134,27 +211,43 @@ export default function PaywallScreen() {
             const isRecommended = plan === config.recommendedPlan;
             const price = prices[plan as keyof typeof prices];
             return (
-              <TouchableOpacity
+              <TiltShell
                 key={plan}
-                style={[styles.planCard, isSelected && styles.planCardSelected]}
-                onPress={() => setSelectedPlan(plan)}
-                activeOpacity={0.7}
+                accent={isSelected ? COLORS.primary : COLORS.textMuted}
+                radius={BORDER_RADIUS.xl}
+                style={styles.planShell}
               >
-                {isRecommended && (
-                  <View style={styles.recommendedBadge}>
-                    <Text style={styles.recommendedText}>{t('paywall.recommended')}</Text>
-                  </View>
-                )}
-                <Text style={[styles.planLabel, isSelected && styles.planLabelSelected]}>
-                  {t(`paywall.plans.${plan}.label`)}
-                </Text>
-                <Text style={[styles.planPrice, isSelected && styles.planPriceSelected]}>
-                  {formatPrice(price)}
-                </Text>
-                <Text style={styles.planDesc}>
-                  {t(`paywall.plans.${plan}.description`)}
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.planCard, isSelected && styles.planCardSelected]}
+                  onPress={() => setSelectedPlan(plan)}
+                  activeOpacity={0.7}
+                >
+                  {isSelected && (
+                    <Animated.View style={[styles.planPulse, planPulseStyle]}>
+                      <LinearGradient
+                        colors={['rgba(107,231,255,0.18)', 'rgba(46,240,181,0.08)', 'transparent']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    </Animated.View>
+                  )}
+                  {isRecommended && (
+                    <View style={styles.recommendedBadge}>
+                      <Text style={styles.recommendedText}>{t('paywall.recommended')}</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.planLabel, isSelected && styles.planLabelSelected]}>
+                    {t(`paywall.plans.${plan}.label`)}
+                  </Text>
+                  <Text style={[styles.planPrice, isSelected && styles.planPriceSelected]}>
+                    {formatPrice(price)}
+                  </Text>
+                  <Text style={styles.planDesc}>
+                    {t(`paywall.plans.${plan}.description`)}
+                  </Text>
+                </TouchableOpacity>
+              </TiltShell>
             );
           })}
         </View>
@@ -202,7 +295,15 @@ export default function PaywallScreen() {
           disabled={isPaying}
           activeOpacity={0.85}
         >
-          <LinearGradient colors={['#1D6FD8', '#1458B0']} style={styles.subscribeGradient}>
+          <LinearGradient colors={['#1494D6', COLORS.primary]} style={styles.subscribeGradient}>
+            <Animated.View style={[styles.subscribeSweep, ctaSweepStyle]}>
+              <LinearGradient
+                colors={['transparent', 'rgba(255,255,255,0.38)', 'transparent']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </Animated.View>
             {isPaying ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
                 <ActivityIndicator size="small" color={COLORS.textInverse} />
@@ -240,6 +341,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xxl,
   },
   backButton: {
     alignSelf: 'flex-end',
@@ -250,38 +352,97 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xl,
     color: COLORS.textSecondary,
   },
-  headerGradient: {
-    alignItems: 'center',
-    paddingVertical: SPACING.xl,
-    borderRadius: BORDER_RADIUS.xl,
+  heroShell: {
+    position: 'relative',
     marginBottom: SPACING.xl,
   },
-  headerIcon: {
-    fontSize: 60,
+  heroGlow: {
+    position: 'absolute',
+    left: -12,
+    right: -12,
+    top: -12,
+    bottom: -12,
+    borderRadius: BORDER_RADIUS.xl,
+  },
+  headerGradient: {
+    padding: SPACING.xl,
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOW.md,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: SPACING.md,
   },
-  title: {
-    fontSize: FONT_SIZE.xxl,
+  heroBadge: {
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.borderStrong,
+    backgroundColor: COLORS.primaryDim,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  heroBadgeText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
     fontWeight: FONT_WEIGHT.bold,
+    letterSpacing: 2.2,
+  },
+  headerIcon: {
+    fontSize: 34,
+    marginBottom: SPACING.md,
+    color: COLORS.primary,
+  },
+  title: {
+    fontSize: FONT_SIZE.xxxl,
+    fontWeight: FONT_WEIGHT.black,
     color: COLORS.text,
-    textAlign: 'center',
     marginBottom: SPACING.sm,
   },
   subtitle: {
-    fontSize: FONT_SIZE.lg,
+    fontSize: FONT_SIZE.md,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    lineHeight: 24,
+  },
+  heroMetrics: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.lg,
+  },
+  heroMetric: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  heroMetricLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textMuted,
+    letterSpacing: 1.8,
+    marginBottom: 2,
+  },
+  heroMetricValue: {
+    fontSize: FONT_SIZE.lg,
+    color: COLORS.text,
+    fontWeight: FONT_WEIGHT.bold,
   },
   trialBadge: {
-    marginTop: SPACING.md,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: 'rgba(255,190,92,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,190,92,0.28)',
     borderRadius: BORDER_RADIUS.full,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.xs,
   },
   trialBadgeText: {
-    fontSize: FONT_SIZE.md,
-    color: '#92400E',
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.warning,
     fontWeight: FONT_WEIGHT.medium,
   },
   featuresSection: {
@@ -289,11 +450,16 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     marginBottom: SPACING.xl,
   },
+  featureShell: {
+    flex: 1,
+  },
   featureColumn: {
     flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.surfaceGlass,
+    borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   featureColumnTitle: {
     fontSize: FONT_SIZE.md,
@@ -317,10 +483,12 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   sectionTitle: {
-    fontSize: FONT_SIZE.lg,
+    fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
+    color: COLORS.textMuted,
     marginBottom: SPACING.md,
+    letterSpacing: 2.2,
+    textTransform: 'uppercase',
   },
   plansGrid: {
     flexDirection: 'row',
@@ -328,21 +496,31 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginBottom: SPACING.xl,
   },
-  planCard: {
+  planShell: {
     width: '47%',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
+  },
+  planCard: {
+    backgroundColor: COLORS.surfaceGlass,
+    borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.md,
     borderWidth: 2,
     borderColor: COLORS.border,
-    alignItems: 'center',
-    minHeight: 100,
+    alignItems: 'flex-start',
+    minHeight: 126,
     position: 'relative',
   },
   planCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.borderStrong,
+    backgroundColor: 'rgba(107,231,255,0.1)',
     ...SHADOW.sm,
+  },
+  planPulse: {
+    position: 'absolute',
+    left: -2,
+    right: -2,
+    top: -2,
+    bottom: -2,
+    borderRadius: BORDER_RADIUS.xl,
   },
   recommendedBadge: {
     position: 'absolute',
@@ -380,7 +558,7 @@ const styles = StyleSheet.create({
   planDesc: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   paymentRow: {
     flexDirection: 'row',
@@ -392,8 +570,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surfaceGlass,
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 2,
     borderColor: COLORS.border,
     padding: SPACING.md,
@@ -423,7 +601,7 @@ const styles = StyleSheet.create({
   loginHintBtn: {
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryDark,
     borderRadius: BORDER_RADIUS.full,
   },
   loginHintBtnText: { fontSize: FONT_SIZE.sm, fontWeight: FONT_WEIGHT.semibold, color: COLORS.textInverse },
@@ -437,6 +615,13 @@ const styles = StyleSheet.create({
     height: TOUCH_TARGET.button + 8,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  subscribeSweep: {
+    position: 'absolute',
+    top: -14,
+    bottom: -14,
+    width: 104,
   },
   subscribeText: {
     fontSize: FONT_SIZE.xl,

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Platform } from 'react-native';
-import type { RemoteConfigState, AppConfig, AppVersion } from '@types/config';
-import { DEFAULT_APP_CONFIG } from '@types/config';
+import type { RemoteConfigState, AppConfig, AppVersion } from '@/types/config';
+import { DEFAULT_APP_CONFIG } from '@/types/config';
 import { fetchAppConfig, fetchAppVersion } from '@services/api';
 import { getItem, setItem } from '@utils/storage';
 import { STORAGE_KEYS } from '@constants/trial';
@@ -9,6 +9,8 @@ import { STORAGE_KEYS } from '@constants/trial';
 interface ConfigStore extends RemoteConfigState {
   /** 同步远程配置（返回是否成功） */
   syncConfig: () => Promise<boolean>;
+  /** 从缓存恢复配置 */
+  loadFromCache: () => Promise<void>;
   /** 设置离线模式 */
   setOfflineMode: (offline: boolean) => void;
   /** 获取有效的 AppConfig（在线用最新，离线用缓存，无缓存用默认值） */
@@ -76,4 +78,3 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     return get().config ?? DEFAULT_APP_CONFIG;
   },
 }));
-

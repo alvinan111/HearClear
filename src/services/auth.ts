@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
-import type { UserProfile } from '@types/auth';
+import type { UserProfile } from '@/types/auth';
 
 /**
  * 认证服务 - 抽象层，便于后续替换为国内自建认证服务

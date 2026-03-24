@@ -12,8 +12,8 @@
  */
 
 import { supabase } from './supabase';
-import type { CreateOrderParams, Payment } from '@types/payment';
-import type { Subscription } from '@types/subscription';
+import type { CreateOrderParams, Payment } from '@/types/payment';
+import type { Subscription } from '@/types/subscription';
 
 /**
  * 创建支付订单（调用 Supabase Edge Function）

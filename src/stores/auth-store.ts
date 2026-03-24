@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { UserProfile, AuthState, LoginMethod } from '@types/auth';
+import type { UserProfile, AuthState, LoginMethod } from '@/types/auth';
 import * as authService from '@services/auth';
 
 interface AuthStore extends AuthState {

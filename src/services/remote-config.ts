@@ -49,7 +49,7 @@ export async function initRemoteConfig(): Promise<{
 
       if (syncSuccess) {
         const platform = Platform.OS as 'ios' | 'android';
-        const versionInfo = await fetchAppVersion(platform);
+        const versionInfo = useConfigStore.getState().versions ?? await fetchAppVersion(platform);
         if (versionInfo?.minVersion != null && versionInfo?.latestVersion != null) {
           const currentVersion = Application.nativeApplicationVersion ?? '1.0.0';
           result.updateUrl = versionInfo.updateUrl ?? '';

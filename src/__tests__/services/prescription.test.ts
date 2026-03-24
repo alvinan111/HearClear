@@ -2,7 +2,7 @@
  * 处方计算：audiogramToPrescription 半增益 + 插值
  */
 import { audiogramToPrescription } from '@services/hearing-test/prescription';
-import { PRESCRIPTION_BAND_FREQS } from '@types/audiogram';
+import { PRESCRIPTION_BAND_FREQS } from '@/types/audiogram';
 
 describe('audiogramToPrescription', () => {
   it('平坦听力图（全 0）得到全 0 处方', () => {

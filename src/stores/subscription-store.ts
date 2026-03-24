@@ -1,11 +1,11 @@
 import { create } from 'zustand';
-import type { SubscriptionState, Subscription } from '@types/subscription';
-import type { UserProfile } from '@types/auth';
+import type { SubscriptionState, Subscription } from '@/types/subscription';
+import type { UserProfile } from '@/types/auth';
 import { fetchActiveSubscription } from '@services/api';
 import { getItem, setItem } from '@utils/storage';
 import { STORAGE_KEYS, TRIAL_DEFAULTS } from '@constants/trial';
 import { daysBetween, isSubscriptionExpired } from '@utils/date';
-import { DEFAULT_APP_CONFIG } from '@types/config';
+import { DEFAULT_APP_CONFIG } from '@/types/config';
 
 interface SubscriptionStore extends SubscriptionState {
   /** 同步用户订阅状态 */

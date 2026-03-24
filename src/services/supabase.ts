@@ -1,19 +1,43 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SUPABASE_CONFIG } from '@config/app';
 
-const FALLBACK_URL = 'https://reiirfhljlepxiibojzh.supabase.co';
-const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlaWlyZmhsamxlcHhpaWJvanpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MDEsImV4cCI6MjA4NzI5NzgwMX0.-AhYX0zpVSBj-gf_v6gdOQMZChKltOQNHUDXc0biLPY';
+const missingSupabaseEnv = [
+  !SUPABASE_CONFIG.URL && 'EXPO_PUBLIC_SUPABASE_URL',
+  !SUPABASE_CONFIG.ANON_KEY && 'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+].filter(Boolean) as string[];
 
-export const supabase = createClient(
-  SUPABASE_CONFIG.URL || FALLBACK_URL,
-  SUPABASE_CONFIG.ANON_KEY || FALLBACK_KEY,
-  {
-    auth: {
-      storage: AsyncStorage,
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-    },
-  }
-);
+export const isSupabaseConfigured = missingSupabaseEnv.length === 0;
+
+export function getSupabaseConfigurationError(): string | null {
+  if (isSupabaseConfigured) return null;
+  return `Supabase is not configured. Missing env vars: ${missingSupabaseEnv.join(', ')}`;
+}
+
+function createUnconfiguredClient(): SupabaseClient {
+  const message = getSupabaseConfigurationError() ?? 'Supabase is not configured.';
+
+  return new Proxy(
+    {},
+    {
+      get() {
+        throw new Error(message);
+      },
+    }
+  ) as SupabaseClient;
+}
+
+export const supabase = isSupabaseConfigured
+  ? createClient(
+      SUPABASE_CONFIG.URL,
+      SUPABASE_CONFIG.ANON_KEY,
+      {
+        auth: {
+          storage: AsyncStorage,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+        },
+      }
+    )
+  : createUnconfiguredClient();

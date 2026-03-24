@@ -19,8 +19,8 @@ jest.mock('@utils/storage');
 import { useConfigStore } from '@stores/config-store';
 import * as api from '@services/api';
 import * as storage from '@utils/storage';
-import type { AppConfig } from '@types/config';
-import { DEFAULT_APP_CONFIG } from '@types/config';
+import type { AppConfig } from '@/types/config';
+import { DEFAULT_APP_CONFIG } from '@/types/config';
 
 const mockApi = api as jest.Mocked<typeof api>;
 const mockStorage = storage as jest.Mocked<typeof storage>;

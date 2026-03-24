@@ -4,8 +4,8 @@
 
 import { setItem, getItem } from '@utils/storage';
 import { STORAGE_KEYS } from '@constants/trial';
-import type { FeedbackCorrection } from '@types/audiogram';
-import { DEFAULT_FEEDBACK_CORRECTION, isFeedbackCorrection } from '@types/audiogram';
+import type { FeedbackCorrection } from '@/types/audiogram';
+import { DEFAULT_FEEDBACK_CORRECTION, isFeedbackCorrection } from '@/types/audiogram';
 
 const OVERALL_MAX = 6;
 const BAND_MAX = 6;
